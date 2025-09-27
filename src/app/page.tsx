@@ -1,103 +1,167 @@
-import Image from "next/image";
-
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 export default function Home() {
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="min-h-screen bg-[color:var(--surface)] text-[color:var(--text)]">
+      {/* Hero */}
+      <section className="relative hero-gradient">
+        <div className="relative mx-auto max-w-5xl px-6 py-24 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-1 text-xs text-white/80 shadow-sm">
+            <span>UGC Factory</span>
+            <span className="text-white/50">—</span>
+            <span>AI Ads that Win</span>
+          </div>
+          <h1 className="mt-6 text-5xl font-extrabold tracking-tight sm:text-6xl">
+            AI Ads that win.
+          </h1>
+          <p className="mt-4 text-white/80 max-w-2xl mx-auto">
+            Turn one image + 8 seconds of dialogue into scroll-stopping UGC.
+          </p>
+          <div className="mt-8 flex items-center justify-center gap-3">
+            <Button asChild className="rounded-full px-5 py-6 text-base font-semibold bg-gradient-to-r from-[color:var(--brand)] to-[color:var(--brand-2)] text-white">
+              <Link href="#pricing">Get started</Link>
+            </Button>
+            <Button asChild variant="outline" className="rounded-full border-white/20 bg-white/10 text-white hover:bg-white/15">
+              <Link href="#demo">Watch demo</Link>
+            </Button>
+          </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          {/* Micro-trust row (placeholder logos) */}
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-8 opacity-80">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-6 w-24 rounded bg-white/10" />
+            ))}
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+      </section>
+
+      {/* Showcase reel carousel */}
+      <section className="mx-auto max-w-6xl px-6 py-10">
+        <h2 className="text-2xl font-bold mb-4">Showcase</h2>
+        <div className="relative">
+          <div className="flex gap-4 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <div key={i} className="min-w-[260px] rounded-2xl border border-white/10 bg-white/5 p-3">
+                <div className="aspect-[9/16] w-[234px] rounded-xl bg-black/40" />
+                <div className="mt-2 text-sm text-white/80">Ad #{i + 1}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Feature trio */}
+      <section className="mx-auto max-w-6xl px-6 py-16 grid gap-6 md:grid-cols-3">
+        {[
+          { title: "AI Avatar UGC", body: "Generate on-brand, human-like spokespeople." },
+          { title: "Product Showcase", body: "Show your product in context with premium visuals." },
+          { title: "AdMax", body: "Smart optimizations for performance and speed." },
+        ].map((f) => (
+          <div key={f.title} className="glass-card">
+            <div className="text-2xl">✨</div>
+            <h3 className="mt-2 text-xl font-semibold">{f.title}</h3>
+            <p className="mt-2 text-sm text-white/75">{f.body}</p>
+            <a className="mt-4 inline-block text-[color:var(--brand-2)] hover:underline" href="#">Try it</a>
+          </div>
+        ))}
+      </section>
+
+      {/* How it works */}
+      <section className="mx-auto max-w-6xl px-6 py-8">
+        <h2 className="text-2xl font-bold">How it works</h2>
+        <div className="mt-6 grid gap-6 md:grid-cols-4">
+          {[
+            "Pick ad type",
+            "Upload or generate persona",
+            "Write 8-sec script",
+            "Render with Veo 3 Fast",
+          ].map((step, i) => (
+            <div key={i} className="glass-card">
+              <div className="text-sm text-white/60">Step {i + 1}</div>
+              <div className="mt-2 font-semibold">{step}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Results band */}
+      <section className="mx-auto max-w-6xl px-6 py-8">
+        <div className="grid gap-6 md:grid-cols-3">
+          {[
+            { k: "2.7x", v: "CTR" },
+            { k: "1.7x", v: "ROAS" },
+            { k: "90%", v: "faster production" },
+          ].map((m) => (
+            <div key={m.v} className="glass-card flex items-center justify-between">
+              <div className="text-4xl font-extrabold">{m.k}</div>
+              <div className="text-sm text-white/70">{m.v}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Pricing strip */}
+      <section id="pricing" className="mx-auto max-w-6xl px-6 py-16">
+        <h2 className="text-3xl font-bold text-center">Pricing</h2>
+        <div className="mt-8 grid gap-6 md:grid-cols-4">
+          {[
+            { name: "Free", price: "$0", cta: "Start free" },
+            { name: "Starter", price: "$19", cta: "Upgrade" },
+            { name: "Pro", price: "$49", cta: "Upgrade" },
+            { name: "Enterprise", price: "Custom", cta: "Contact" },
+          ].map((p) => (
+            <div key={p.name} className="glass-card flex flex-col">
+              <div className="text-xs text-white/60">{p.name}</div>
+              <div className="mt-2 text-3xl font-bold">{p.price}
+                <span className="text-sm font-normal text-white/60">/mo</span>
+              </div>
+              <ul className="mt-3 text-sm text-white/75 space-y-1">
+                <li>• High-quality renders</li>
+                <li>• Credits included</li>
+                <li>• Priority rendering</li>
+              </ul>
+              <Button asChild className="mt-4 rounded-full bg-gradient-to-r from-[color:var(--brand)] to-[color:var(--brand-2)] text-white">
+                <Link href="/pricing">{p.cta}</Link>
+              </Button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-white/10">
+        <div className="mx-auto max-w-6xl px-6 py-12 grid gap-8 md:grid-cols-4">
+          {[
+            { h: "Product", items: ["Features", "Pricing", "Changelog"] },
+            { h: "Company", items: ["About", "Careers", "Contact"] },
+            { h: "Legal", items: ["Terms", "Privacy"] },
+            { h: "Social", items: ["Twitter", "YouTube", "LinkedIn"] },
+          ].map((col) => (
+            <div key={col.h}>
+              <div className="font-semibold">{col.h}</div>
+              <ul className="mt-3 space-y-1 text-sm text-white/70">
+                {col.items.map((x) => (
+                  <li key={x}><a className="hover:underline" href="#">{x}</a></li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+        <div className="text-center text-xs text-white/50 pb-8">© {new Date().getFullYear()} UGC Factory</div>
       </footer>
+
+      {/* Sticky mobile CTA */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[#0B0B10]/80 backdrop-blur sm:hidden">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
+          <div className="text-sm">
+            <div className="font-semibold">Start your first ad</div>
+            <div className="text-white/60">Free plan available</div>
+          </div>
+          <Button asChild className="rounded-full bg-gradient-to-r from-[color:var(--brand)] to-[color:var(--brand-2)] text-white">
+            <Link href="/pricing">Get started</Link>
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
