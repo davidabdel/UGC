@@ -11,6 +11,7 @@ export async function POST(req: Request) {
     const form = await req.formData();
     const file = form.get("file");
     const prompt = (form.get("prompt") as string) || "";
+    const personaSummary = (form.get("personaSummary") as string) || "";
     const aspectRatio = (form.get("aspectRatio") as string) || "16:9";
 
     const KIE_API_KEY = env("KIE_API_KEY");
@@ -101,11 +102,22 @@ export async function POST(req: Request) {
     // Simple heuristic: if prompt asks to remove background, pass an explicit flag if supported
     const removeBg = typeof prompt === "string" && /remove\s+the?\s*background/i.test(prompt);
 
+    // Compose final prompt. If we have an uploaded image URL, embed it per user's instruction
+    // Format: "Generate this image {URL} and generate this person {PROMPT}".
+    // Use the user's Generate Image prompt; if empty, fall back to personaSummary.
+    let finalPrompt = prompt;
+    if (uploadedUrl) {
+      const personText = (prompt && prompt.trim()) ? prompt.trim() : (personaSummary || "");
+      finalPrompt = personText
+        ? `Generate this image ${uploadedUrl} and generate this person ${personText}`
+        : `Generate this image ${uploadedUrl}`;
+    }
+
     const payload = {
       model: modelToUse,
       callBackUrl: CALLBACK,
       input: {
-        prompt,
+        prompt: finalPrompt,
         output_format: "png",
         image_size,
         ...(file instanceof File ? { task_type: "image_edit" as const } : {}),
@@ -134,14 +146,14 @@ export async function POST(req: Request) {
       console.debug("[KIE] createTask response", { status: createRes.status, ok: createRes.ok, body: createJson });
     } catch {}
     if (!createRes.ok || createJson?.code !== 200) {
-      return NextResponse.json({ ok: false, error: `Create task failed: ${createJson?.msg || createRes.status}`, raw: createJson }, { status: 502 });
+      return NextResponse.json({ ok: false, error: `Create task failed: ${createJson?.msg || createRes.status}`, raw: createJson, modelUsed: modelToUse, hadUploadUrl: Boolean(uploadedUrl) }, { status: 502 });
     }
     const taskId: string | undefined = createJson?.data?.taskId;
     if (!taskId) {
       return NextResponse.json({ ok: false, error: "Missing taskId in response", raw: createJson }, { status: 502 });
     }
 
-    return NextResponse.json({ ok: true, taskId, uploadedUrl });
+    return NextResponse.json({ ok: true, taskId, uploadedUrl, modelUsed: modelToUse });
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err?.message || "Unknown error" }, { status: 500 });
   }

@@ -17,6 +17,8 @@ export default function ProjectsPage() {
   const [filter, setFilter] = useState<Status>("All");
   const [layout, setLayout] = useState<"grid" | "list">("grid");
   const [items, setItems] = useState<Project[]>([]);
+  const [showModal, setShowModal] = useState(false);
+  const [active, setActive] = useState<Project | null>(null);
 
   useEffect(() => {
     try {
@@ -26,6 +28,36 @@ export default function ProjectsPage() {
       if (Array.isArray(parsed)) setItems(parsed as Project[]);
     } catch {}
   }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowModal(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const openViewer = (p: Project) => {
+    setActive(p);
+    setShowModal(true);
+  };
+
+  const downloadActive = async () => {
+    if (!active?.videoUrl) return;
+    try {
+      const res = await fetch(active.videoUrl);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const ts = new Date().toISOString().replace(/[:.]/g, "-");
+      a.download = `${active.title?.replace(/\s+/g, "-") || "ugc-video"}-${ts}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } catch {}
+  };
 
   const filtered = items.filter((p) => (filter === "All" ? true : p.status === filter));
 
@@ -66,7 +98,7 @@ export default function ProjectsPage() {
         layout === "grid" ? (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filtered.map((p) => (
-              <Link key={p.id} href={`/app/projects/${p.id}`} className="glass-card block">
+              <button key={p.id} onClick={() => openViewer(p)} className="glass-card block text-left">
                 <div className="aspect-video w-full overflow-hidden rounded-xl bg-white/5">
                   {p.videoUrl ? (
                     // eslint-disable-next-line jsx-a11y/media-has-caption
@@ -82,13 +114,13 @@ export default function ProjectsPage() {
                   </div>
                   <span className="rounded-full px-2 py-0.5 text-[10px] border border-white/15 bg-white/10">{p.status}</span>
                 </div>
-              </Link>
+              </button>
             ))}
           </div>
         ) : (
           <div className="glass-card divide-y divide-white/10 p-0">
             {filtered.map((p) => (
-              <Link key={p.id} href={`/app/projects/${p.id}`} className="flex items-center gap-4 px-4 py-3 hover:bg-white/5">
+              <button key={p.id} onClick={() => openViewer(p)} className="flex w-full items-center gap-4 px-4 py-3 text-left hover:bg-white/5">
                 <div className="h-14 w-24 overflow-hidden rounded-lg bg-white/5">
                   {p.videoUrl ? (
                     // eslint-disable-next-line jsx-a11y/media-has-caption
@@ -100,7 +132,7 @@ export default function ProjectsPage() {
                   <div className="text-xs text-white/60">Updated {p.updatedAt}</div>
                 </div>
                 <span className="rounded-full px-2 py-0.5 text-[10px] border border-white/15 bg-white/10">{p.status}</span>
-              </Link>
+              </button>
             ))}
           </div>
         )
@@ -110,6 +142,35 @@ export default function ProjectsPage() {
           <h3 className="text-xl font-semibold">No projects yet</h3>
           <p className="mt-2 max-w-sm text-sm text-white/70">Create New Ad to get started.</p>
           <Link href="/app/create" className="mt-6 btn-primary">Create New Ad</Link>
+        </div>
+      )}
+
+      {/* Viewer modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/70" onClick={() => setShowModal(false)} />
+          <div className="absolute inset-0 grid place-items-center p-4">
+            <div className="w-full max-w-5xl overflow-hidden rounded-2xl border border-white/10 bg-[#0B0D12]">
+              <div className="flex items-center justify-between border-b border-white/10 p-3">
+                <div className="text-sm text-white/70">{active?.title || "Preview"}</div>
+                <div className="flex gap-2">
+                  <button className={`btn-ghost ${!active?.videoUrl ? "pointer-events-none opacity-60" : ""}`} onClick={downloadActive} disabled={!active?.videoUrl}>Download</button>
+                  {active?.videoUrl ? (
+                    <a className="btn-ghost" href={active.videoUrl} target="_blank" rel="noopener noreferrer">Open in new tab</a>
+                  ) : null}
+                  <button className="btn-ghost" onClick={() => setShowModal(false)}>Close</button>
+                </div>
+              </div>
+              <div className="aspect-video w-full bg-black">
+                {active?.videoUrl ? (
+                  // eslint-disable-next-line jsx-a11y/media-has-caption
+                  <video src={active.videoUrl} controls autoPlay className="h-full w-full object-contain" />
+                ) : (
+                  <div className="grid h-full place-items-center text-xs text-white/60">No video</div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

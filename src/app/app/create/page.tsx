@@ -49,12 +49,22 @@ export default function CreateWizardPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
+  // Persona upload state
+  const [personaFile, setPersonaFile] = useState<File | null>(null);
+  const [personaPreview, setPersonaPreview] = useState<string | null>(null);
+  const [personaError, setPersonaError] = useState<string | null>(null);
+  const personaInputRef = useRef<HTMLInputElement>(null);
+  const [isPersonaDragging, setIsPersonaDragging] = useState(false);
+  const [selectedAccessories, setSelectedAccessories] = useState<string[]>([]);
+  const [personaSummaryTouched, setPersonaSummaryTouched] = useState(false);
+
   // Persona generate form state (basic wiring)
   const [personaFields, setPersonaFields] = useState<Record<string, string>>({});
 
   // Image generation (mock) state
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const [showVideoModal, setShowVideoModal] = useState(false);
 
   const words = useMemo(() => (dialogue.trim() ? dialogue.trim().split(/\s+/).length : 0), [dialogue]);
   const chars = dialogue.length;
@@ -93,6 +103,28 @@ export default function CreateWizardPage() {
       if (s === 4 && adType === "product") return 5;
       return Math.min(6, s + 1);
     });
+  };
+
+  const downloadVideo = async () => {
+    if (!videoUrl) return;
+    try {
+      setVideoStatus("Preparing download…");
+      const res = await fetch(videoUrl, { mode: "cors" });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const ts = new Date().toISOString().replace(/[:.]/g, "-");
+      a.download = `ugc-video-${ts}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      setVideoStatus("Download started.");
+    } catch (e) {
+      console.warn("download failed", e);
+      setVideoStatus("Could not start download. Try 'Open in new tab'.");
+    }
   };
 
   // Generate video using Veo 3 Fast via our API
@@ -343,6 +375,44 @@ export default function CreateWizardPage() {
     return () => URL.revokeObjectURL(url);
   }, [productFile]);
 
+  // Persona preview lifecycle
+  useEffect(() => {
+    if (!personaFile) {
+      setPersonaPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(personaFile);
+    setPersonaPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [personaFile]);
+
+  // Build an automatic persona summary from selections
+  const buildPersonaSummary = useMemo(() => {
+    const parts: string[] = [];
+    const f = personaFields;
+    if (f.gender) parts.push(f.gender);
+    if (f.age) parts.push(f.age);
+    if (f.skin) parts.push(`${f.skin} skin`);
+    if (f.body) parts.push(`${f.body} body`);
+    if (f.hair) parts.push(`${f.hair} hair`);
+    if (f.style) parts.push(`${f.style} style`);
+    if (f.env) parts.push(f.env);
+    if (f.angle) parts.push(f.angle);
+    if (f.light) parts.push(f.light);
+    if (f.mood) parts.push(f.mood);
+    if (selectedAccessories.length && !selectedAccessories.includes('none')) {
+      parts.push(`accessories: ${selectedAccessories.join(', ')}`);
+    }
+    return parts.join(', ');
+  }, [personaFields, selectedAccessories]);
+
+  // Auto-fill summary unless the user has manually edited it
+  useEffect(() => {
+    if (personaMode === 'generate' && !personaSummaryTouched) {
+      setPersonaSummary(buildPersonaSummary);
+    }
+  }, [personaMode, personaSummaryTouched, buildPersonaSummary]);
+
   // Removed dev query param skipping; users must start from step 1
 
   const step6Image = useMemo(() => {
@@ -374,8 +444,33 @@ export default function CreateWizardPage() {
     setProductFileName(`${file.name} (${sizeMB.toFixed(1)}MB)`);
   };
 
+  // Persona file validation: mirrors product validation
+  const onChoosePersonaFile = async (file: File) => {
+    setPersonaError(null);
+    const validTypes = [
+      "image/png",
+      "image/jpeg",
+      "image/webp",
+      "image/heic",
+      "image/heif",
+      "image/heic-sequence",
+    ];
+    const byMime = validTypes.includes(file.type);
+    const byExt = /\.(png|jpg|jpeg|webp|heic|heif)$/i.test(file.name || "");
+    if (!(byMime || byExt)) {
+      setPersonaError("Please upload a PNG, JPG, WebP, HEIC, or HEIF image.");
+      setPersonaFile(null);
+      return;
+    }
+    setPersonaFile(file);
+  };
+
   const handlePersonaField = (id: string, value: string) => {
     setPersonaFields((prev) => ({ ...prev, [id]: value }));
+    // If user hasn't manually edited summary, keep auto-filling as fields change
+    if (!personaSummaryTouched) {
+      // Trigger effect below to rebuild summary
+    }
   };
 
   const createImage = async () => {
@@ -388,22 +483,34 @@ export default function CreateWizardPage() {
         ? imagePrompt.trim()
         : `Place the uploaded product in a suitable context. Aspect ratio: ${aspectRatio}.`;
 
-      if (productFile) {
+      const sourceFile = productFile || personaFile;
+      if (sourceFile) {
         const fd = new FormData();
-        fd.append("file", productFile);
+        fd.append("file", sourceFile);
         fd.append("prompt", finalPrompt);
         fd.append("aspectRatio", aspectRatio);
+        fd.append("personaSummary", personaSummary || "");
 
         const res = await fetch("/api/generate-image/create", { method: "POST", body: fd });
         if (!res.ok) {
           const text = await res.text();
           console.warn("/api/generate-image/create error", res.status, text);
+          try {
+            const j = JSON.parse(text);
+            const msg = j?.error || `Create task failed (${res.status}).`;
+            const modelInfo = j?.modelUsed ? ` Model: ${j.modelUsed}.` : "";
+            setGenStatus(`${msg}${modelInfo}`);
+          } catch {
+            setGenStatus(`Create task failed (${res.status}).`);
+          }
           setGeneratedImageUrl(productPreview);
-          setGenStatus(`Create task failed (${res.status}).`);
           return;
         }
         const data = await res.json().catch(() => ({}));
         console.log("/api/generate-image/create", data);
+        if (data?.modelUsed) {
+          setGenStatus(`Queued on ${data.modelUsed}… 0%`);
+        }
         const inputUrl: string | undefined = data?.uploadedUrl;
         // Mock path: server may return imageUrl when API key missing
         if (data?.imageUrl) {
@@ -488,10 +595,9 @@ export default function CreateWizardPage() {
           setGeneratedImageUrl(productPreview);
         }
       } else {
-        // No product image available; keep previous mock behavior
-        await new Promise((r) => setTimeout(r, 600));
-        setGeneratedImageUrl(productPreview);
-        setGenStatus("No image uploaded; using original preview.");
+        // No input file selected at all
+        await new Promise((r) => setTimeout(r, 300));
+        setGenStatus("Please upload a product or persona image first.");
       }
     } catch (e) {
       console.error(e);
@@ -552,7 +658,10 @@ export default function CreateWizardPage() {
                 >
                   <div className="text-sm text-white/70">Talking Head (UGC)</div>
                   <div className="mt-1 font-semibold">A real person speaking to camera.</div>
-                  <div className="mt-3 h-28 rounded-xl bg-white/5" />
+                  <div className="mt-3 h-28 rounded-xl overflow-hidden border border-white/10 bg-white/5">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/Images/user_generated.png" alt="UGC talking head example" className="h-full w-full object-cover" />
+                  </div>
                 </button>
                 <button
                   className={`rounded-2xl border p-6 text-left transition ${adType === "ugc_product" ? "border-[color:var(--brand-2)] bg-white/10" : "border-white/10 hover:bg-white/5"}`}
@@ -683,18 +792,62 @@ export default function CreateWizardPage() {
               </div>
 
               {personaMode === "upload" && (
-                <div className="mt-6 rounded-2xl border border-dashed border-white/20 bg-white/5 p-8 text-center">
+                <div
+                  className={`mt-6 rounded-2xl border border-dashed p-8 text-center transition-colors ${isPersonaDragging ? "border-[color:var(--brand-2)] bg-white/10" : "border-white/20 bg-white/5"}`}
+                  onClick={() => personaInputRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "copy"; setIsPersonaDragging(true); }}
+                  onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsPersonaDragging(true); }}
+                  onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsPersonaDragging(false); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsPersonaDragging(false);
+                    const f = e.dataTransfer?.files?.[0];
+                    if (f) onChoosePersonaFile(f);
+                  }}
+                  role="button"
+                  aria-label="Upload persona image by clicking or dragging a file here"
+                >
+                  <input
+                    ref={personaInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) onChoosePersonaFile(f);
+                    }}
+                  />
                   <div className="text-sm text-white/70">Drag & drop or click to upload</div>
-                  <div className="mt-3 text-xs text-white/60">Same constraints as product uploader</div>
+                  <div className="mt-3">
+                    {personaFile ? (
+                      <span className="text-sm">{personaFile.name}</span>
+                    ) : (
+                      <span className="text-xs text-white/60">No file selected</span>
+                    )}
+                  </div>
+                  {personaPreview && (
+                    <div className="mx-auto mt-4 w-full max-w-md overflow-hidden rounded-xl border border-white/10 bg-black/20">
+                      {/* Preview (HEIC/HEIF may not render in browser) */}
+                      {(/\.(heic|heif)$/i.test(personaFile?.name || "") || /heic|heif/i.test(personaFile?.type || "")) ? (
+                        <div className="p-4 text-xs text-white/70">Selected HEIC/HEIF image. Preview may not display in this browser.</div>
+                      ) : (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={personaPreview} alt="Persona preview" className="block max-h-72 w-full object-contain" />
+                      )}
+                    </div>
+                  )}
+                  {personaError && (
+                    <div className="mt-3 text-xs text-red-400">{personaError}</div>
+                  )}
                 </div>
               )}
 
               {personaMode === "generate" && (
                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
                   {[
-                    { id: "gender", label: "Gender", options: ["Male", "Female", "Non-binary", "Prefer not to say"] },
+                    { id: "gender", label: "Gender", options: ["Male", "Female"] },
                     { id: "age", label: "Age band", options: ["Teen", "20s", "30s", "40s", "50s+"] },
-                    { id: "ethnicity", label: "Ethnicity", options: ["Group A", "Group B", "Mixed/Other"] },
                     { id: "skin", label: "Skin tone", options: ["very fair", "fair", "light", "medium", "tan", "deep", "very deep"] },
                     { id: "body", label: "Body type", options: ["slim", "average", "athletic", "curvy"] },
                     { id: "hair", label: "Hair", options: ["short", "medium", "long"] },
@@ -724,9 +877,26 @@ export default function CreateWizardPage() {
                   <div className="space-y-2 sm:col-span-2">
                     <label className="text-sm text-white/80">Accessories (optional)</label>
                     <div className="flex flex-wrap gap-2">
-                      {['earrings','glasses','hat','watch','none'].map((x)=> (
-                        <button key={x} className="rounded-full border border-white/15 px-3 py-1 text-xs hover:bg-white/10">{x}</button>
-                      ))}
+                      {['earrings','glasses','hat','watch','none'].map((x)=> {
+                        const selected = selectedAccessories.includes(x);
+                        return (
+                          <button
+                            type="button"
+                            key={x}
+                            onClick={() => {
+                              setPersonaSummaryTouched(false); // keep auto-fill in sync when toggling
+                              setSelectedAccessories((prev) => {
+                                if (x === 'none') return ['none'];
+                                const withoutNone = prev.filter((p) => p !== 'none');
+                                return selected ? withoutNone.filter((p) => p !== x) : [...withoutNone, x];
+                              });
+                            }}
+                            className={`rounded-full border px-3 py-1 text-xs ${selected ? 'border-white/20 bg-white/20' : 'border-white/15 hover:bg-white/10'}`}
+                          >
+                            {x}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -960,8 +1130,14 @@ export default function CreateWizardPage() {
                       )}
                     </div>
                     <div className="mt-3 flex flex-wrap gap-3">
-                      <a className={`btn-primary ${!videoUrl ? "pointer-events-none opacity-60" : ""}`} href={videoUrl ?? "#"} download>
+                      <button className={`btn-primary ${!videoUrl ? "pointer-events-none opacity-60" : ""}`} onClick={downloadVideo} disabled={!videoUrl}>
                         Download MP4
+                      </button>
+                      <button className={`btn-ghost ${!videoUrl ? "pointer-events-none opacity-60" : ""}`} onClick={() => setShowVideoModal(true)} disabled={!videoUrl}>
+                        Play here
+                      </button>
+                      <a className={`btn-ghost ${!videoUrl ? "pointer-events-none opacity-60" : ""}`} href={videoUrl ?? "#"} target="_blank" rel="noopener noreferrer">
+                        Open in new tab
                       </a>
                       <button className="btn-ghost" onClick={() => { setVideoUrl(null); setVideoStatus(""); }}>Create another</button>
                     </div>
@@ -972,6 +1148,29 @@ export default function CreateWizardPage() {
             </div>
           )}
         </section>
+        {/* Video viewer modal */}
+        {showVideoModal && (
+          <div className="fixed inset-0 z-50">
+            <div className="absolute inset-0 bg-black/70" onClick={() => setShowVideoModal(false)} />
+            <div className="absolute inset-0 grid place-items-center p-4">
+              <div className="w-full max-w-5xl overflow-hidden rounded-2xl border border-white/10 bg-[#0B0D12]">
+                <div className="flex items-center justify-between border-b border-white/10 p-3">
+                  <div className="text-sm text-white/70">Video preview</div>
+                  <div className="flex gap-2">
+                    <a className={`btn-ghost ${!videoUrl ? "pointer-events-none opacity-60" : ""}`} href={videoUrl ?? "#"} target="_blank" rel="noopener noreferrer">Open in new tab</a>
+                    <button className="btn-ghost" onClick={() => setShowVideoModal(false)}>Close</button>
+                  </div>
+                </div>
+                <div className="aspect-video w-full bg-black">
+                  {videoUrl ? (
+                    // eslint-disable-next-line jsx-a11y/media-has-caption
+                    <video src={videoUrl} controls autoPlay className="h-full w-full object-contain" />
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Sticky footer */}
