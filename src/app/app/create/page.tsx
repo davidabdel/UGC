@@ -129,7 +129,6 @@ export default function CreateWizardPage() {
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 2000);
       setVideoStatus("Download started.");
-      }
     } catch (e) {
       console.warn("download failed", e);
       setVideoStatus("Could not start download. Try 'Open in new tab'.");
@@ -309,7 +308,8 @@ export default function CreateWizardPage() {
         await new Promise((r) => setTimeout(r, delay + Math.random() * 1000));
         delay = Math.min(Math.round(delay * 1.4), maxDelay);
       }
-      }    } catch (e) {
+      }    }
+    } catch (e) {
       console.error(e);
       setVideoStatus("Unexpected error during video render.");
     } finally {
@@ -603,7 +603,8 @@ export default function CreateWizardPage() {
           setGenStatus("Timed out waiting for image.");
           setGeneratedImageUrl(productPreview);
         }
-      }    } catch (e) {
+      }
+    } catch (e) {
       console.error(e);
       setGeneratedImageUrl(productPreview);
       setGenStatus("Unexpected error; showing original preview.");
