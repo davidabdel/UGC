@@ -16,7 +16,7 @@ export async function POST(req: Request) {
 
     const KIE_API_KEY = env("KIE_API_KEY");
     const KIE_API_BASE = env("KIE_API_BASE") ?? "https://api.kie.ai";
-    const MODEL = env("KIE_NANO_MODEL") ?? "google/nano-banana-edit";
+    const MODEL = env("KIE_NANO_MODEL") ?? "google/nano-banana";
     const EDIT_MODEL = env("KIE_NANO_EDIT_MODEL") ?? "google/nano-banana-edit";
     const CALLBACK = env("KIE_CALLBACK_URL");
     const KIE_UPLOAD_BASE = env("KIE_UPLOAD_BASE") ?? "https://kieai.redpandaai.co";

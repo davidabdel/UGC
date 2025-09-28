@@ -24,6 +24,7 @@ export default function CreateWizardPage() {
   const [voiceGender, setVoiceGender] = useState<"Male" | "Female">("Female");
   const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16">("16:9");
   const [imagePrompt, setImagePrompt] = useState<string>("");
+  const [imagePromptTouched, setImagePromptTouched] = useState(false);
   const [genStatus, setGenStatus] = useState<string>("");
   const [dialogueLoading, setDialogueLoading] = useState<boolean>(false);
   const [dialogueError, setDialogueError] = useState<string | null>(null);
@@ -105,6 +106,13 @@ export default function CreateWizardPage() {
     });
   };
 
+  // When entering Step 4 from Persona Generate, prefill the prompt with the persona summary (if user hasn't typed a custom prompt)
+  useEffect(() => {
+    if (step === 4 && personaMode === 'generate' && personaSummary && !imagePromptTouched) {
+      setImagePrompt(personaSummary);
+    }
+  }, [step, personaMode, personaSummary, imagePromptTouched]);
+
   const downloadVideo = async () => {
     if (!videoUrl) return;
     try {
@@ -121,7 +129,7 @@ export default function CreateWizardPage() {
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 2000);
       setVideoStatus("Download started.");
-    } catch (e) {
+      }    } catch (e) {
       console.warn("download failed", e);
       setVideoStatus("Could not start download. Try 'Open in new tab'.");
     }
@@ -300,7 +308,7 @@ export default function CreateWizardPage() {
         await new Promise((r) => setTimeout(r, delay + Math.random() * 1000));
         delay = Math.min(Math.round(delay * 1.4), maxDelay);
       }
-    } catch (e) {
+      }    } catch (e) {
       console.error(e);
       setVideoStatus("Unexpected error during video render.");
     } finally {
@@ -347,7 +355,7 @@ export default function CreateWizardPage() {
         setDialogue(data.text);
         setDialogueError(null);
       }
-    } catch (e) {
+      }    } catch (e) {
       console.error(e);
       setDialogueError("Unexpected error calling AI assistant.");
     } finally {
@@ -484,9 +492,9 @@ export default function CreateWizardPage() {
         : `Place the uploaded product in a suitable context. Aspect ratio: ${aspectRatio}.`;
 
       const sourceFile = productFile || personaFile;
-      if (sourceFile) {
+      {
         const fd = new FormData();
-        fd.append("file", sourceFile);
+        if (sourceFile) fd.append("file", sourceFile);
         fd.append("prompt", finalPrompt);
         fd.append("aspectRatio", aspectRatio);
         fd.append("personaSummary", personaSummary || "");
@@ -594,12 +602,7 @@ export default function CreateWizardPage() {
           setGenStatus("Timed out waiting for image.");
           setGeneratedImageUrl(productPreview);
         }
-      } else {
-        // No input file selected at all
-        await new Promise((r) => setTimeout(r, 300));
-        setGenStatus("Please upload a product or persona image first.");
-      }
-    } catch (e) {
+      }    } catch (e) {
       console.error(e);
       setGeneratedImageUrl(productPreview);
       setGenStatus("Unexpected error; showing original preview.");
@@ -949,7 +952,7 @@ export default function CreateWizardPage() {
                       className="min-h-[84px] w-full rounded-xl bg-[#0F1117] border border-white/10 p-3 outline-none"
                       placeholder="place the product in a kitchen that looks super modern and clean"
                       value={imagePrompt}
-                      onChange={(e) => setImagePrompt(e.target.value)}
+                      onChange={(e) => { setImagePromptTouched(true); setImagePrompt(e.target.value); }}
                     />
                     <div className="text-xs text-white/60">Tip: The more specific the prompt, the better the result.</div>
                   </div>
