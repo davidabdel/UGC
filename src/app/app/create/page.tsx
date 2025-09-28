@@ -186,7 +186,8 @@ export default function CreateWizardPage() {
           } else {
             console.warn("/api/kie/upload failed", upRes.status, upJson);
           }
-        } catch (e) {
+        }
+    } catch (e) {
           console.warn("upload error", e);
         }
       }
