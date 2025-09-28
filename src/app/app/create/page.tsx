@@ -129,7 +129,8 @@ export default function CreateWizardPage() {
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 2000);
       setVideoStatus("Download started.");
-      }    } catch (e) {
+      }
+    } catch (e) {
       console.warn("download failed", e);
       setVideoStatus("Could not start download. Try 'Open in new tab'.");
     }
