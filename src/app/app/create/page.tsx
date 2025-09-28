@@ -310,7 +310,7 @@ export default function CreateWizardPage() {
         delay = Math.min(Math.round(delay * 1.4), maxDelay);
       }
       }    }
-    } catch (e) {
+    catch (e) {
       console.error(e);
       setVideoStatus("Unexpected error during video render.");
     } finally {
