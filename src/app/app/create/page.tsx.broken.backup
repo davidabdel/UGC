@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 const steps = [
   { id: 1, title: "Ad Type" },
@@ -14,7 +13,6 @@ const steps = [
 
 export default function CreateWizardPage() {
   const [step, setStep] = useState(1);
-  const router = useRouter();
 
   // Form state (mocked, UI only)
   const [adType, setAdType] = useState<"product" | "talking" | "ugc_product" | null>(null);
@@ -73,6 +71,31 @@ export default function CreateWizardPage() {
   const chars = dialogue.length;
   const dialogueOk = words <= 22 && chars <= 150 && words > 0;
 
+  // TEMP: Minimal wizard UI to keep the page usable while we stabilize the full flow.
+  // Remove this block when the full wizard is fixed.
+  const SHOW_TEMP_WIZARD = false;
+  if (SHOW_TEMP_WIZARD) {
+    return (
+      <div className="min-h-[80vh] p-8">
+        <div className="glass-card !p-8 max-w-2xl mx-auto">
+          <h1 className="text-xl font-bold">Temporary Create Wizard</h1>
+          <p className="text-sm text-white/70 mt-1">Minimal UI while we stabilize the full wizard.</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button className="btn-ghost" onClick={() => setStep(1)}>Go to Step 1</button>
+            <button className="btn-ghost" onClick={() => setStep(2)}>Go to Step 2</button>
+            <button className="btn-ghost" onClick={() => setStep(3)}>Go to Step 3</button>
+            <button className="btn-ghost" onClick={() => setStep(4)}>Go to Step 4</button>
+            <button className="btn-ghost" onClick={() => setStep(5)}>Go to Step 5</button>
+            <button className="btn-ghost" onClick={() => setStep(6)}>Go to Step 6</button>
+            <button className="btn-primary" onClick={() => setStep((s) => Math.max(1, s - 1))}>Back</button>
+            <button className="btn-primary" onClick={() => setStep((s) => Math.min(6, s + 1))}>Next</button>
+          </div>
+          <div className="mt-6 text-sm text-white/80">Current step: <span className="font-semibold">{step}</span></div>
+        </div>
+      </div>
+    );
+  }
+
   const canContinue = useMemo(() => {
     switch (step) {
       case 1:
@@ -102,13 +125,8 @@ export default function CreateWizardPage() {
     setStep((s) => {
       // From step 2, if not talking head, jump to step 4
       if (s === 2 && adType !== "talking") return 4;
-      // From step 4, go directly to Video (step 6)
-      if (s === 4) return 6;
-      // If on final step, navigate to Home (/app)
-      if (s === 6) {
-        router.push("/app");
-        return 6;
-      }
+      // From step 4, if product-only, proceed to Dialogue (step 5) where dialogue is optional
+      if (s === 4 && adType === "product") return 5;
       return Math.min(6, s + 1);
     });
   };
@@ -139,101 +157,7 @@ export default function CreateWizardPage() {
     } catch (e) {
       console.warn("download failed", e);
       setVideoStatus("Could not start download. Try 'Open in new tab'.");
-    }
-  };
-
-  // Download generated image (Step 4)
-  const downloadImage = async () => {
-    if (!generatedImageUrl) return;
-    try {
-      setGenStatus("Preparing image download…");
-      const ts = new Date().toISOString().replace(/[:.]/g, "-");
-      // Case 1: data URL → download directly without fetch
-      if (/^data:/i.test(generatedImageUrl)) {
-        const a = document.createElement("a");
-        a.href = generatedImageUrl;
-        a.download = `ugc-image-${ts}.png`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setGenStatus("Image download started.");
-        
-        // Save to My Projects
-        try {
-          const key = "ugc_projects";
-          const existing = JSON.parse(localStorage.getItem(key) || "[]");
-          const now = new Date();
-          const id = String(now.getTime());
-          const title = `Image ${now.toLocaleString()}`;
-          const item = { id, title, status: "Ready", type: "image", updatedAt: "just now", videoUrl: generatedImageUrl };
-          const next = Array.isArray(existing) ? [item, ...existing] : [item];
-          localStorage.setItem(key, JSON.stringify(next));
-        } catch {}
-        return;
-      }
-      // Case 2: try direct fetch (may fail due to CORS)
-      const tryDirect = async () => {
-        const res = await fetch(generatedImageUrl, { mode: "cors" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        const ext = blob.type.includes("png") ? "png" : blob.type.includes("jpeg") ? "jpg" : "png";
-        a.download = `ugc-image-${ts}.${ext}`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 2000);
-      };
-      try {
-        await tryDirect();
-        setGenStatus("Image download started.");
-        
-        // Save to My Projects
-        try {
-          const key = "ugc_projects";
-          const existing = JSON.parse(localStorage.getItem(key) || "[]");
-          const now = new Date();
-          const id = String(now.getTime());
-          const title = `Image ${now.toLocaleString()}`;
-          const item = { id, title, status: "Ready", type: "image", updatedAt: "just now", videoUrl: generatedImageUrl };
-          const next = Array.isArray(existing) ? [item, ...existing] : [item];
-          localStorage.setItem(key, JSON.stringify(next));
-        } catch {}
-      } catch {
-        // Case 3: fall back to server proxy to bypass CORS
-        const proxied = await fetch(`/api/download-image?url=${encodeURIComponent(generatedImageUrl)}`);
-        if (!proxied.ok) throw new Error(`Proxy HTTP ${proxied.status}`);
-        const blob = await proxied.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        const ext = blob.type.includes("png") ? "png" : blob.type.includes("jpeg") ? "jpg" : "png";
-        a.download = `ugc-image-${ts}.${ext}`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 2000);
-        setGenStatus("Image download started.");
-        
-        // Save to My Projects
-        try {
-          const key = "ugc_projects";
-          const existing = JSON.parse(localStorage.getItem(key) || "[]");
-          const now = new Date();
-          const id = String(now.getTime());
-          const title = `Image ${now.toLocaleString()}`;
-          const item = { id, title, status: "Ready", type: "image", updatedAt: "just now", videoUrl: generatedImageUrl };
-          const next = Array.isArray(existing) ? [item, ...existing] : [item];
-          localStorage.setItem(key, JSON.stringify(next));
-        } catch {}
-      }
-    } catch (e) {
-      console.warn("image download failed", e);
-      setGenStatus("Could not download image. Try right-click > Save image as…");
-    }
-  };
+    };
 
   // Generate video using Veo 3 Fast via our API
   const generateVideo = async () => {
@@ -384,7 +308,7 @@ export default function CreateWizardPage() {
                 const now = new Date();
                 const id = String(now.getTime());
                 const title = `Video ${now.toLocaleString()}`;
-                const item = { id, title, status: "Ready", type: "video", updatedAt: "just now", videoUrl: url };
+                const item = { id, title, status: "Ready", updatedAt: "just now", videoUrl: url };
                 const next = Array.isArray(existing) ? [item, ...existing] : [item];
                 localStorage.setItem(key, JSON.stringify(next));
               } catch {}
@@ -418,8 +342,7 @@ export default function CreateWizardPage() {
         syntheticTimerRef.current = null;
       }
       setVideoGenerating(false);
-    }
-  };
+    };
 
   // Dialogue helpers via OpenAI API proxy
   const runDialogueTool = async (mode: "assist" | "shorten" | "cleanup") => {
@@ -460,8 +383,7 @@ export default function CreateWizardPage() {
       setDialogueError("Unexpected error calling AI assistant.");
     } finally {
       setDialogueLoading(false);
-    }
-  };
+    };
   const onBack = () => {
     setStep((s) => {
       // From step 4, if not talking head, jump back to step 2
@@ -591,31 +513,18 @@ export default function CreateWizardPage() {
         ? imagePrompt.trim()
         : `Place the uploaded product in a suitable context. Aspect ratio: ${aspectRatio}.`;
 
-      // If user chose Generate persona (talking head), do NOT send any file so we use base model
-      const sourceFile = (adType === "talking" && personaMode === "generate")
-        ? null
-        : (productFile || personaFile);
+      const sourceFile = productFile || personaFile;
       {
         const fd = new FormData();
         if (sourceFile) fd.append("file", sourceFile);
         fd.append("prompt", finalPrompt);
         fd.append("aspectRatio", aspectRatio);
         fd.append("personaSummary", personaSummary || "");
-        if (personaMode) fd.append("personaMode", personaMode);
 
-        // Choose API endpoint based on flow
-        const endpoint = (adType === "talking")
-          ? (personaMode === "upload"
-              ? "/api/generate-image/persona-upload"
-              : personaMode === "generate"
-                ? "/api/generate-image/persona-generate"
-                : "/api/generate-image/create")
-          : "/api/generate-image/create";
-
-        const res = await fetch(endpoint, { method: "POST", body: fd });
+        const res = await fetch("/api/generate-image/create", { method: "POST", body: fd });
         if (!res.ok) {
           const text = await res.text();
-          console.warn(`${endpoint} error`, res.status, text);
+          console.warn("/api/generate-image/create error", res.status, text);
           try {
             const j = JSON.parse(text);
             const msg = j?.error || `Create task failed (${res.status}).`;
@@ -635,21 +544,8 @@ export default function CreateWizardPage() {
         const inputUrl: string | undefined = data?.uploadedUrl;
         // Mock path: server may return imageUrl when API key missing
         if (data?.imageUrl) {
-          const imageUrl = data.imageUrl as string;
-          setGeneratedImageUrl(imageUrl);
+          setGeneratedImageUrl(data.imageUrl as string);
           setGenStatus("Image ready.");
-          
-          // Auto-save to My Projects
-          try {
-            const key = "ugc_projects";
-            const existing = JSON.parse(localStorage.getItem(key) || "[]");
-            const now = new Date();
-            const id = String(now.getTime());
-            const title = `Image ${now.toLocaleString()}`;
-            const item = { id, title, status: "Ready", type: "image", updatedAt: "just now", videoUrl: imageUrl };
-            const next = Array.isArray(existing) ? [item, ...existing] : [item];
-            localStorage.setItem(key, JSON.stringify(next));
-          } catch {}
           return;
         }
         const taskId: string | undefined = data?.taskId;
@@ -709,18 +605,6 @@ export default function CreateWizardPage() {
             if (url) {
               setGeneratedImageUrl(url);
               setGenStatus("Image ready.");
-              
-              // Auto-save to My Projects
-              try {
-                const key = "ugc_projects";
-                const existing = JSON.parse(localStorage.getItem(key) || "[]");
-                const now = new Date();
-                const id = String(now.getTime());
-                const title = `Image ${now.toLocaleString()}`;
-                const item = { id, title, status: "Ready", type: "image", updatedAt: "just now", videoUrl: url };
-                const next = Array.isArray(existing) ? [item, ...existing] : [item];
-                localStorage.setItem(key, JSON.stringify(next));
-              } catch {}
             } else {
               setGeneratedImageUrl(productPreview);
               setGenStatus("No image returned; showing original preview.");
@@ -740,14 +624,14 @@ export default function CreateWizardPage() {
           setGenStatus("Timed out waiting for image.");
           setGeneratedImageUrl(productPreview);
         }
-      }    } catch (e) {
+      }
+    } catch (e) {
       console.error(e);
       setGeneratedImageUrl(productPreview);
       setGenStatus("Unexpected error; showing original preview.");
     } finally {
       setIsGenerating(false);
-    }
-  };
+    };
 
   return (
     <div className="min-h-[80vh]">
@@ -801,7 +685,7 @@ export default function CreateWizardPage() {
                   <div className="mt-1 font-semibold">A real person speaking to camera.</div>
                   <div className="mt-3 h-28 rounded-xl overflow-hidden border border-white/10 bg-white/5">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/Images/ai-gen.png" alt="Talking head example" className="h-full w-full object-cover" />
+                    <img src="/Images/user_generated.png" alt="UGC talking head example" className="h-full w-full object-cover" />
                   </div>
                 </button>
                 <button
@@ -1321,14 +1205,7 @@ export default function CreateWizardPage() {
           <div className="flex items-center gap-3 text-xs">
             <span className={`rounded-full px-2 py-0.5 ${dialogueOk ? "bg-[color:var(--success)]/15 text-[color:var(--success)]" : "bg-white/10 text-white/70"}`}>Step {step} of 6</span>
           </div>
-          <div className="flex items-center gap-3">
-            {step === 4 && generatedImageUrl ? (
-              <button className="btn-ghost" onClick={downloadImage}>Download Image</button>
-            ) : null}
-            <button className="btn-primary disabled:opacity-50" onClick={onNext} disabled={!canContinue}>
-              {step === 4 ? "Turn into Video" : step === 6 ? "Finish" : "Continue"}
-            </button>
-          </div>
+          <button className="btn-primary disabled:opacity-50" onClick={onNext} disabled={!canContinue}>{step === 6 ? "Finish" : "Continue"}</button>
         </div>
       </div>
     </div>

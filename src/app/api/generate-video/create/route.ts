@@ -19,7 +19,8 @@ export async function POST(req: Request) {
 
     const KIE_API_KEY = env("KIE_API_KEY");
     const KIE_API_BASE = env("KIE_API_BASE") ?? "https://api.kie.ai";
-    const MODEL = env("KIE_VIDEO_MODEL") ?? "veo3";
+    // According to KIE API docs, valid model names are "veo3" or "veo3_fast"
+    const MODEL = env("KIE_VIDEO_MODEL") ?? "veo3_fast";
     const CALLBACK = env("KIE_CALLBACK_URL");
 
     if (!KIE_API_KEY) {
@@ -42,10 +43,10 @@ export async function POST(req: Request) {
     const payload: any = {
       prompt: finalPrompt,
       imageUrls: isPublicUrl ? [imageUrl] : [],
-      model: MODEL,
+      model: MODEL, // Using MODEL variable which is set to "veo3_fast"
       aspectRatio: image_size,
       // Optional flags recommended by docs
-      enableFallback: false,
+      enableFallback: true, // Enable fallback to handle potential errors
       enableTranslation: true,
     };
     if (CALLBACK) payload.callBackUrl = CALLBACK;

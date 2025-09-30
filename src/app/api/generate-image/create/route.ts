@@ -13,6 +13,7 @@ export async function POST(req: Request) {
     const prompt = (form.get("prompt") as string) || "";
     const personaSummary = (form.get("personaSummary") as string) || "";
     const aspectRatio = (form.get("aspectRatio") as string) || "16:9";
+    const personaMode = (form.get("personaMode") as string) || ""; // "upload" | "generate" | ""
 
     const KIE_API_KEY = env("KIE_API_KEY");
     const KIE_API_BASE = env("KIE_API_BASE") ?? "https://api.kie.ai";
@@ -37,7 +38,9 @@ export async function POST(req: Request) {
 
     // Upload image to Kie to obtain a URL
     let uploadedUrl: string | undefined;
-    if (file instanceof File) {
+    // Only attempt upload when NOT in persona generate mode
+    const allowUpload = personaMode !== "generate";
+    if (allowUpload && file instanceof File) {
       // If HEIC/HEIF, convert to JPEG server-side using sharp
       let workingFile: File = file;
       const isHeic = /heic|heif/i.test(file.type || "") || /\.(heic|heif)$/i.test(file.name || "");
@@ -94,10 +97,17 @@ export async function POST(req: Request) {
       }
     }
 
-    // Choose an edit model if a file is provided; fall back to MODEL otherwise
-    const modelToUse = (file instanceof File)
+    // Explicit persona-driven model selection:
+    // - If user chose to upload a reference on Persona step → use edit model
+    // - If user chose to generate persona (no reference) → use base model
+    // - Fallback: if personaMode is missing, keep previous heuristic by file presence
+    const modelToUse = personaMode === "upload"
       ? (EDIT_MODEL || (MODEL.endsWith("-edit") ? MODEL : `${MODEL}-edit`))
-      : MODEL;
+      : personaMode === "generate"
+        ? MODEL
+        : ((file instanceof File)
+            ? (EDIT_MODEL || (MODEL.endsWith("-edit") ? MODEL : `${MODEL}-edit`))
+            : MODEL);
 
     // Simple heuristic: if prompt asks to remove background, pass an explicit flag if supported
     const removeBg = typeof prompt === "string" && /remove\s+the?\s*background/i.test(prompt);
@@ -120,7 +130,8 @@ export async function POST(req: Request) {
         prompt: finalPrompt,
         output_format: "png",
         image_size,
-        ...(file instanceof File ? { task_type: "image_edit" as const } : {}),
+        // Do not mark as edit task when personaMode === 'generate'
+        ...(allowUpload && file instanceof File ? { task_type: "image_edit" as const } : {}),
         ...(removeBg ? { remove_background: true } : {}),
         ...(uploadedUrl ? { image_urls: [uploadedUrl] } : {}),
       },
@@ -146,7 +157,7 @@ export async function POST(req: Request) {
       console.debug("[KIE] createTask response", { status: createRes.status, ok: createRes.ok, body: createJson });
     } catch {}
     if (!createRes.ok || createJson?.code !== 200) {
-      return NextResponse.json({ ok: false, error: `Create task failed: ${createJson?.msg || createRes.status}`, raw: createJson, modelUsed: modelToUse, hadUploadUrl: Boolean(uploadedUrl) }, { status: 502 });
+      return NextResponse.json({ ok: false, error: `Create task failed: ${createJson?.msg || createRes.status}`, raw: createJson, modelUsed: modelToUse, hadUploadUrl: Boolean(uploadedUrl), personaMode, hadFile: file instanceof File, allowUpload }, { status: 502 });
     }
     const taskId: string | undefined = createJson?.data?.taskId;
     if (!taskId) {

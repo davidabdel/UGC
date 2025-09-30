@@ -3,18 +3,19 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-type Status = "All" | "Draft" | "Ready" | "Failed";
+type FilterType = "Images" | "Videos" | "All";
 
 type Project = {
   id: string;
   title: string;
-  status: Exclude<Status, "All">;
+  status: "Ready" | "Draft" | "Failed";
+  type: "image" | "video";
   updatedAt: string;
   videoUrl?: string;
 };
 
 export default function ProjectsPage() {
-  const [filter, setFilter] = useState<Status>("All");
+  const [filter, setFilter] = useState<FilterType>("All");
   const [layout, setLayout] = useState<"grid" | "list">("grid");
   const [items, setItems] = useState<Project[]>([]);
   const [showModal, setShowModal] = useState(false);
@@ -25,7 +26,17 @@ export default function ProjectsPage() {
       const raw = localStorage.getItem("ugc_projects");
       if (!raw) return;
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) setItems(parsed as Project[]);
+      console.log("Projects loaded from localStorage:", parsed);
+      if (Array.isArray(parsed)) {
+        // Ensure all items have a type field
+        const itemsWithType = parsed.map(item => ({
+          ...item,
+          // If type is missing, infer from videoUrl or set default to "video"
+          type: item.type || "video"
+        }));
+        console.log("Projects with type field:", itemsWithType);
+        setItems(itemsWithType as Project[]);
+      }
     } catch {}
   }, []);
 
@@ -51,7 +62,17 @@ export default function ProjectsPage() {
       const a = document.createElement("a");
       a.href = url;
       const ts = new Date().toISOString().replace(/[:.]/g, "-");
-      a.download = `${active.title?.replace(/\s+/g, "-") || "ugc-video"}-${ts}.mp4`;
+      
+      // Set appropriate extension based on content type
+      let extension = ".mp4";
+      if (active.type === "image") {
+        extension = blob.type.includes("png") ? ".png" : 
+                   blob.type.includes("jpeg") || blob.type.includes("jpg") ? ".jpg" : 
+                   ".png";
+      }
+      
+      const prefix = active.type === "image" ? "ugc-image" : "ugc-video";
+      a.download = `${active.title?.replace(/\s+/g, "-") || prefix}-${ts}${extension}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -59,14 +80,23 @@ export default function ProjectsPage() {
     } catch {}
   };
 
-  const filtered = items.filter((p) => (filter === "All" ? true : p.status === filter));
+  const filtered = items.filter((p) => {
+    console.log(`Filtering item: ${p.title}, type: ${p.type}, filter: ${filter}`);
+    if (filter === "All") return true;
+    if (filter === "Images") return p.type === "image";
+    if (filter === "Videos") return p.type === "video";
+    return true;
+  });
+  
+  console.log(`Filter: ${filter}, Items: ${items.length}, Filtered: ${filtered.length}`);
+  console.log("Filtered items:", filtered);
 
   return (
     <div className="space-y-6">
       {/* Toolbar */}
       <div className="glass-card flex flex-wrap items-center justify-between gap-3 !p-4">
         <div className="flex items-center gap-2 text-sm">
-          {(["All", "Draft", "Ready", "Failed"] as Status[]).map((s) => (
+          {(["Images", "Videos", "All"] as FilterType[]).map((s) => (
             <button
               key={s}
               onClick={() => setFilter(s)}
@@ -101,8 +131,13 @@ export default function ProjectsPage() {
               <button key={p.id} onClick={() => openViewer(p)} className="glass-card block text-left">
                 <div className="aspect-video w-full overflow-hidden rounded-xl bg-white/5">
                   {p.videoUrl ? (
-                    // eslint-disable-next-line jsx-a11y/media-has-caption
-                    <video src={p.videoUrl} className="h-full w-full object-cover" />
+                    p.type === "image" ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.videoUrl} alt={p.title} className="h-full w-full object-cover" />
+                    ) : (
+                      // eslint-disable-next-line jsx-a11y/media-has-caption
+                      <video src={p.videoUrl} className="h-full w-full object-cover" />
+                    )
                   ) : (
                     <div className="grid h-full place-items-center text-xs text-white/60">No preview</div>
                   )}
@@ -123,8 +158,13 @@ export default function ProjectsPage() {
               <button key={p.id} onClick={() => openViewer(p)} className="flex w-full items-center gap-4 px-4 py-3 text-left hover:bg-white/5">
                 <div className="h-14 w-24 overflow-hidden rounded-lg bg-white/5">
                   {p.videoUrl ? (
-                    // eslint-disable-next-line jsx-a11y/media-has-caption
-                    <video src={p.videoUrl} className="h-full w-full object-cover" />
+                    p.type === "image" ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.videoUrl} alt={p.title} className="h-full w-full object-cover" />
+                    ) : (
+                      // eslint-disable-next-line jsx-a11y/media-has-caption
+                      <video src={p.videoUrl} className="h-full w-full object-cover" />
+                    )
                   ) : null}
                 </div>
                 <div className="flex-1">
@@ -154,7 +194,9 @@ export default function ProjectsPage() {
               <div className="flex items-center justify-between border-b border-white/10 p-3">
                 <div className="text-sm text-white/70">{active?.title || "Preview"}</div>
                 <div className="flex gap-2">
-                  <button className={`btn-ghost ${!active?.videoUrl ? "pointer-events-none opacity-60" : ""}`} onClick={downloadActive} disabled={!active?.videoUrl}>Download</button>
+                  <button className={`btn-ghost ${!active?.videoUrl ? "pointer-events-none opacity-60" : ""}`} onClick={downloadActive} disabled={!active?.videoUrl}>
+                    {active?.type === "image" ? "Download Image" : "Download Video"}
+                  </button>
                   {active?.videoUrl ? (
                     <a className="btn-ghost" href={active.videoUrl} target="_blank" rel="noopener noreferrer">Open in new tab</a>
                   ) : null}
@@ -163,10 +205,15 @@ export default function ProjectsPage() {
               </div>
               <div className="aspect-video w-full bg-black">
                 {active?.videoUrl ? (
-                  // eslint-disable-next-line jsx-a11y/media-has-caption
-                  <video src={active.videoUrl} controls autoPlay className="h-full w-full object-contain" />
+                  active?.type === "image" ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={active.videoUrl} alt={active.title} className="h-full w-full object-contain" />
+                  ) : (
+                    // eslint-disable-next-line jsx-a11y/media-has-caption
+                    <video src={active.videoUrl} controls autoPlay className="h-full w-full object-contain" />
+                  )
                 ) : (
-                  <div className="grid h-full place-items-center text-xs text-white/60">No video</div>
+                  <div className="grid h-full place-items-center text-xs text-white/60">No preview</div>
                 )}
               </div>
             </div>
