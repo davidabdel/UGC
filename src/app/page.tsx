@@ -5,9 +5,9 @@ export default function Home() {
     <div className="min-h-screen bg-[color:var(--surface)] text-[color:var(--text)]">
       {/* Hero */}
       <section className="relative hero-gradient">
-        <div className="relative mx-auto max-w-5xl px-6 py-24 text-center">
+        <div className="relative mx-auto max-w-5xl px-6 pt-24 pb-8 text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-1 text-xs text-white/80 shadow-sm">
-            <span>UGC Factory</span>
+            <span>ChatUGC</span>
             <span className="text-white/50">—</span>
             <span>AI Ads that Win</span>
           </div>
@@ -26,11 +26,50 @@ export default function Home() {
             </Button>
           </div>
 
-          {/* Micro-trust row (placeholder logos) */}
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-8 opacity-80">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-6 w-24 rounded bg-white/10" />
-            ))}
+          {/* Micro-trust row (client logos) - infinite scroll */}
+          <div className="mt-8 relative overflow-hidden w-full h-16">
+            <div className="absolute animate-marquee whitespace-nowrap flex items-center gap-24">
+              {[
+                { src: "/Images/logos/AirHum_HQ.png", alt: "AirHum", width: 120 },
+                { src: "/Images/logos/AQ%20Logo%20and%20Product%20Pic%20(4).png", alt: "AQ", width: 80 },
+                { src: "/Images/logos/BUZZ-BRANDING-LOGOMARK-WORD.png", alt: "Buzz Branding", width: 100 },
+                { src: "/Images/logos/ClickDigital%20Logo.png", alt: "ClickDigital", width: 120 },
+                { src: "/Images/logos/UC_Logo_Ne_small.png", alt: "UC", width: 80 },
+                { src: "/Images/logos/Leonardo_Phoenix_10_Create_a_minimalist_professional_logo_for_0%20(1).jpg", alt: "Leonardo Phoenix", width: 110 },
+                { src: "/Images/logos/logo.png", alt: "Logo", width: 100 },
+              ].map((l) => (
+                <div key={l.src} className="flex h-12 items-center justify-center px-4">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={l.src}
+                    alt={l.alt}
+                    style={{ maxWidth: `${l.width}px` }}
+                    className="h-auto max-h-full w-auto object-contain opacity-90"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="absolute animate-marquee2 whitespace-nowrap flex items-center gap-24">
+              {[
+                { src: "/Images/logos/AirHum_HQ.png", alt: "AirHum", width: 120 },
+                { src: "/Images/logos/AQ%20Logo%20and%20Product%20Pic%20(4).png", alt: "AQ", width: 80 },
+                { src: "/Images/logos/BUZZ-BRANDING-LOGOMARK-WORD.png", alt: "Buzz Branding", width: 100 },
+                { src: "/Images/logos/ClickDigital%20Logo.png", alt: "ClickDigital", width: 120 },
+                { src: "/Images/logos/UC_Logo_Ne_small.png", alt: "UC", width: 80 },
+                { src: "/Images/logos/Leonardo_Phoenix_10_Create_a_minimalist_professional_logo_for_0%20(1).jpg", alt: "Leonardo Phoenix", width: 110 },
+                { src: "/Images/logos/logo.png", alt: "Logo", width: 100 },
+              ].map((l) => (
+                <div key={l.src} className="flex h-12 items-center justify-center px-4">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={l.src}
+                    alt={l.alt}
+                    style={{ maxWidth: `${l.width}px` }}
+                    className="h-auto max-h-full w-auto object-contain opacity-90"
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -40,12 +79,41 @@ export default function Home() {
         <h2 className="text-2xl font-bold mb-4">Showcase</h2>
         <div className="relative">
           <div className="flex gap-4 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="min-w-[260px] rounded-2xl border border-white/10 bg-white/5 p-3">
-                <div className="aspect-[9/16] w-[234px] rounded-xl bg-black/40" />
-                <div className="mt-2 text-sm text-white/80">Ad #{i + 1}</div>
+            {/* 1. Sydney Harbour */}
+            <div className="min-w-[260px] rounded-2xl border border-white/10 bg-white/5 p-3">
+              <div className="aspect-[9/16] w-[234px] overflow-hidden rounded-xl border border-white/10 bg-black/40">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/Images/SydneyHarbour.png" alt="Showcase Sydney Harbour" className="h-full w-full object-cover" />
               </div>
-            ))}
+              <div className="mt-2 text-sm text-white/80">Ad #1</div>
+            </div>
+
+            {/* 2. buzz.png */}
+            <div className="min-w-[260px] rounded-2xl border border-white/10 bg-white/5 p-3">
+              <div className="aspect-[9/16] w-[234px] overflow-hidden rounded-xl border border-white/10 bg-black/40">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/Images/buzz.png" alt="Showcase buzz" className="h-full w-full object-cover" />
+              </div>
+              <div className="mt-2 text-sm text-white/80">Ad #2</div>
+            </div>
+
+            {/* 3. ai-gen.png */}
+            <div className="min-w-[260px] rounded-2xl border border-white/10 bg-white/5 p-3">
+              <div className="aspect-[9/16] w-[234px] overflow-hidden rounded-xl border border-white/10 bg-black/40">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/Images/ai-gen.png" alt="Showcase ai-gen" className="h-full w-full object-cover" />
+              </div>
+              <div className="mt-2 text-sm text-white/80">Ad #3</div>
+            </div>
+
+            {/* 4. MelbourneCity.png */}
+            <div className="min-w-[260px] rounded-2xl border border-white/10 bg-white/5 p-3">
+              <div className="aspect-[9/16] w-[234px] overflow-hidden rounded-xl border border-white/10 bg-black/40">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/Images/MelbourneCity.png" alt="Showcase Melbourne City" className="h-full w-full object-cover" />
+              </div>
+              <div className="mt-2 text-sm text-white/80">Ad #4</div>
+            </div>
           </div>
         </div>
       </section>
@@ -147,7 +215,7 @@ export default function Home() {
             </div>
           ))}
         </div>
-        <div className="text-center text-xs text-white/50 pb-8">© {new Date().getFullYear()} UGC Factory</div>
+        <div className="text-center text-xs text-white/50 pb-8">© {new Date().getFullYear()} ChatUGC</div>
       </footer>
 
       {/* Sticky mobile CTA */}

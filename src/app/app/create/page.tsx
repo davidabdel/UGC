@@ -81,14 +81,15 @@ export default function CreateWizardPage() {
         // If Product Showcase, require a valid uploaded file; if Talking Head, skip
         return adType === "talking" || !!productFile;
       case 3:
-        // Skip persona requirements unless Talking Head
-        if (adType !== "talking") return true;
+        // Require persona for both Talking Head and UGC with Product
+        if (adType !== "talking" && adType !== "ugc_product") return true;
         return personaMode === "upload" || (personaMode === "generate" && !!personaSummary);
       case 4:
         // Only continue after an image exists and generation isn't running
         return !!generatedImageUrl && !isGenerating;
       case 5:
         // For product-only flow, skip dialogue requirements
+        // Both Talking Head and UGC with Product require dialogue
         if (adType === "product") return true;
         return dialogueOk;
       case 6:
@@ -100,10 +101,15 @@ export default function CreateWizardPage() {
 
   const onNext = () => {
     setStep((s) => {
-      // From step 2, if not talking head, jump to step 4
-      if (s === 2 && adType !== "talking") return 4;
-      // From step 4, go directly to Video (step 6)
-      if (s === 4) return 6;
+      // From step 2, only skip persona step for Product showcase
+      // Both Talking Head and UGC with Product need the persona step
+      if (s === 2 && adType === "product") return 4;
+      // From step 4, go directly to Video (step 6) only for product showcase
+      // For UGC with Product and Talking Head, go to dialogue step (step 5)
+      if (s === 4) {
+        if (adType === "product") return 6;
+        return 5; // Go to dialogue step for UGC with Product and Talking Head
+      }
       // If on final step, navigate to Home (/app)
       if (s === 6) {
         router.push("/app");
@@ -466,8 +472,11 @@ export default function CreateWizardPage() {
     setStep((s) => {
       // From step 4, if not talking head, jump back to step 2
       if (s === 4 && adType !== "talking") return 2;
-      // From step 6, if product-only, jump back to Dialogue (step 5)
-      if (s === 6 && adType === "product") return 5;
+      // From step 6, go back to appropriate step based on ad type
+      if (s === 6) {
+        if (adType === "product") return 4; // Product showcase goes back to image step
+        return 5; // UGC with Product and Talking Head go back to dialogue step
+      }
       return Math.max(1, s - 1);
     });
   };
@@ -591,26 +600,57 @@ export default function CreateWizardPage() {
         ? imagePrompt.trim()
         : `Place the uploaded product in a suitable context. Aspect ratio: ${aspectRatio}.`;
 
-      // If user chose Generate persona (talking head), do NOT send any file so we use base model
-      const sourceFile = (adType === "talking" && personaMode === "generate")
-        ? null
-        : (productFile || personaFile);
+      // Handle different file upload scenarios based on ad type and persona mode
+      let primaryFile = null;
+      let secondaryFile = null;
+      
+      if (adType === "talking") {
+        // For talking head, we only need the persona file
+        if (personaMode === "generate") {
+          // No file needed for generate mode
+          primaryFile = null;
+        } else if (personaMode === "upload") {
+          // Use persona file for upload mode
+          primaryFile = personaFile;
+        }
+      } else if (adType === "ugc_product") {
+        // For UGC with Product, we need both product and persona
+        primaryFile = productFile; // Always use product as primary file
+        
+        if (personaMode === "upload") {
+          // For upload mode, we also need the persona file
+          secondaryFile = personaFile;
+        }
+        // For generate mode, no secondary file needed
+      } else {
+        // For product showcase, just use the product file
+        primaryFile = productFile;
+      }
+      
       {
         const fd = new FormData();
-        if (sourceFile) fd.append("file", sourceFile);
+        if (primaryFile) fd.append("file", primaryFile);
+        if (secondaryFile) fd.append("secondaryFile", secondaryFile);
         fd.append("prompt", finalPrompt);
         fd.append("aspectRatio", aspectRatio);
         fd.append("personaSummary", personaSummary || "");
         if (personaMode) fd.append("personaMode", personaMode);
+        fd.append("adType", adType || ""); // Send ad type to API
 
         // Choose API endpoint based on flow
-        const endpoint = (adType === "talking")
-          ? (personaMode === "upload"
-              ? "/api/generate-image/persona-upload"
-              : personaMode === "generate"
-                ? "/api/generate-image/persona-generate"
-                : "/api/generate-image/create")
-          : "/api/generate-image/create";
+        let endpoint = "/api/generate-image/create";
+        
+        if (adType === "talking") {
+          // Talking head uses persona endpoints
+          endpoint = personaMode === "upload"
+            ? "/api/generate-image/persona-upload"
+            : personaMode === "generate"
+              ? "/api/generate-image/persona-generate"
+              : "/api/generate-image/create";
+        } else if (adType === "ugc_product") {
+          // UGC with Product uses dedicated endpoint that handles both images
+          endpoint = "/api/generate-image/ugc-product";
+        }
 
         const res = await fetch(endpoint, { method: "POST", body: fd });
         if (!res.ok) {
@@ -749,8 +789,12 @@ export default function CreateWizardPage() {
     }
   };
 
+  // Testing helpers removed
+
   return (
     <div className="min-h-[80vh]">
+      {/* Testing Panel removed */}
+      
       <div className="grid gap-6 md:grid-cols-[260px_1fr]">
         {/* Progress sidebar */}
         <aside className="hidden md:block">
@@ -810,8 +854,11 @@ export default function CreateWizardPage() {
                 >
                   <div className="text-sm text-white/70">UGC with Product</div>
                   <div className="mt-1 font-semibold">A creator showcasing your product.</div>
-                  <div className="mt-3 h-28 rounded-xl bg-white/5" />
-                  <div className="mt-2 text-xs text-white/60">Requires product image</div>
+                  <div className="mt-3 h-28 rounded-xl overflow-hidden border border-white/10 bg-white/5">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/Images/ugc-image-2025-09-30T04-09-49-174Z.png" alt="UGC with product example" className="h-full w-full object-cover" />
+                  </div>
+                  <div className="mt-2 text-xs text-white/60">Requires product image and persona image</div>
                 </button>
               </div>
 
@@ -913,7 +960,7 @@ export default function CreateWizardPage() {
             </div>
           )}
 
-          {step === 3 && adType === "talking" && (
+          {step === 3 && (adType === "talking" || adType === "ugc_product") && (
             <div className="glass-card !p-8">
               <h2 className="text-lg font-semibold">Persona</h2>
               <p className="mt-1 text-sm text-white/70">Upload a face you want to match, or generate a fresh persona.</p>

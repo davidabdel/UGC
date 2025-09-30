@@ -1,0 +1,229 @@
+import { NextResponse } from "next/server";
+
+export const runtime = "nodejs";
+
+function env(name: string) {
+  return process.env[name];
+}
+
+export async function POST(req: Request) {
+  try {
+    const form = await req.formData();
+    const productFile = form.get("file"); // Primary file (product)
+    const personaFile = form.get("secondaryFile"); // Secondary file (persona)
+    const prompt = (form.get("prompt") as string) || "";
+    const personaSummary = (form.get("personaSummary") as string) || "";
+    const aspectRatio = (form.get("aspectRatio") as string) || "16:9";
+    const personaMode = (form.get("personaMode") as string) || "";
+
+    const KIE_API_KEY = env("KIE_API_KEY");
+    const KIE_API_BASE = env("KIE_API_BASE") ?? "https://api.kie.ai";
+    const EDIT_MODEL = env("KIE_NANO_EDIT_MODEL") ?? "google/nano-banana-edit"; // Always use edit model
+    const CALLBACK = env("KIE_CALLBACK_URL");
+    const KIE_UPLOAD_BASE = env("KIE_UPLOAD_BASE") ?? "https://kieai.redpandaai.co";
+
+    if (!KIE_API_KEY) {
+      return NextResponse.json({ ok: false, error: "KIE_API_KEY not configured" }, { status: 500 });
+    }
+
+    if (!(productFile instanceof File)) {
+      return NextResponse.json({ ok: false, error: "Product image file is required" }, { status: 400 });
+    }
+
+    const image_size = ["16:9", "9:16", "1:1"].includes(aspectRatio) ? aspectRatio : "auto";
+
+    // Upload product image
+    let productUrl: string | undefined;
+    let personaUrl: string | undefined;
+
+    // Process product file (convert HEIC if needed)
+    let workingProductFile: File = productFile;
+    const isProductHeic = /heic|heif/i.test((productFile as File).type || "") || /\\.(heic|heif)$/i.test((productFile as File).name || "");
+    if (isProductHeic) {
+      try {
+        const sharp = (await import("sharp")).default;
+        const inputBuf = Buffer.from(await (productFile as File).arrayBuffer());
+        const outBuf = await sharp(inputBuf).jpeg({ quality: 90 }).toBuffer();
+        const outName = ((productFile as File).name || "upload").replace(/\\.(heic|heif)$/i, ".jpg");
+        workingProductFile = new File([outBuf], outName, { type: "image/jpeg" });
+      } catch (err) {
+        return NextResponse.json(
+          { ok: false, error: "HEIC/HEIF conversion failed; please install sharp or upload PNG/JPG/WebP" },
+          { status: 500 }
+        );
+      }
+    }
+
+    // Upload product image
+    try {
+      const fd = new FormData();
+      fd.append("file", workingProductFile);
+      fd.append("uploadPath", "ugc-factory");
+      fd.append("fileName", workingProductFile.name);
+      const upRes = await fetch(`${KIE_UPLOAD_BASE}/api/file-stream-upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${KIE_API_KEY}` },
+        body: fd,
+      });
+      const upJson = await upRes.json();
+      if (upRes.ok && (upJson?.success || upJson?.code === 200)) {
+        productUrl = upJson?.data?.fileUrl || upJson?.data?.url || upJson?.data?.downloadUrl;
+      }
+    } catch {}
+
+    if (!productUrl) {
+      try {
+        const arr = await (workingProductFile as File).arrayBuffer();
+        const b64 = Buffer.from(arr).toString("base64");
+        const payload = {
+          fileBase64: `data:${(workingProductFile as File).type || "image/jpeg"};base64,${b64}`,
+          uploadPath: "ugc-factory",
+          fileName: (workingProductFile as File).name || "upload.jpg",
+        };
+        const upRes = await fetch(`${KIE_UPLOAD_BASE}/api/file-base64-upload`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${KIE_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const upJson = await upRes.json();
+        if (upRes.ok && (upJson?.success || upJson?.code === 200)) {
+          productUrl = upJson?.data?.fileUrl || upJson?.data?.url || upJson?.data?.downloadUrl;
+        }
+      } catch {}
+    }
+
+    if (!productUrl) {
+      return NextResponse.json({ ok: false, error: "Failed to upload product image" }, { status: 500 });
+    }
+
+    // Process persona file if provided
+    if (personaFile instanceof File) {
+      let workingPersonaFile: File = personaFile;
+      const isPersonaHeic = /heic|heif/i.test((personaFile as File).type || "") || /\\.(heic|heif)$/i.test((personaFile as File).name || "");
+      if (isPersonaHeic) {
+        try {
+          const sharp = (await import("sharp")).default;
+          const inputBuf = Buffer.from(await (personaFile as File).arrayBuffer());
+          const outBuf = await sharp(inputBuf).jpeg({ quality: 90 }).toBuffer();
+          const outName = ((personaFile as File).name || "upload").replace(/\\.(heic|heif)$/i, ".jpg");
+          workingPersonaFile = new File([outBuf], outName, { type: "image/jpeg" });
+        } catch (err) {
+          return NextResponse.json(
+            { ok: false, error: "HEIC/HEIF conversion failed for persona image" },
+            { status: 500 }
+          );
+        }
+      }
+
+      // Upload persona image
+      try {
+        const fd = new FormData();
+        fd.append("file", workingPersonaFile);
+        fd.append("uploadPath", "ugc-factory");
+        fd.append("fileName", workingPersonaFile.name);
+        const upRes = await fetch(`${KIE_UPLOAD_BASE}/api/file-stream-upload`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${KIE_API_KEY}` },
+          body: fd,
+        });
+        const upJson = await upRes.json();
+        if (upRes.ok && (upJson?.success || upJson?.code === 200)) {
+          personaUrl = upJson?.data?.fileUrl || upJson?.data?.url || upJson?.data?.downloadUrl;
+        }
+      } catch {}
+
+      if (!personaUrl) {
+        try {
+          const arr = await (workingPersonaFile as File).arrayBuffer();
+          const b64 = Buffer.from(arr).toString("base64");
+          const payload = {
+            fileBase64: `data:${(workingPersonaFile as File).type || "image/jpeg"};base64,${b64}`,
+            uploadPath: "ugc-factory",
+            fileName: (workingPersonaFile as File).name || "upload.jpg",
+          };
+          const upRes = await fetch(`${KIE_UPLOAD_BASE}/api/file-base64-upload`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${KIE_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const upJson = await upRes.json();
+          if (upRes.ok && (upJson?.success || upJson?.code === 200)) {
+            personaUrl = upJson?.data?.fileUrl || upJson?.data?.url || upJson?.data?.downloadUrl;
+          }
+        } catch {}
+      }
+
+      if (!personaUrl) {
+        return NextResponse.json({ ok: false, error: "Failed to upload persona image" }, { status: 500 });
+      }
+    }
+
+    // Build final prompt
+    const personText = personaSummary || "";
+    const finalPrompt = `${prompt} ${personText ? `Person description: ${personText}` : ""}`.trim();
+
+    // Prepare image URLs array
+    const imageUrls = [productUrl];
+    if (personaUrl) {
+      imageUrls.push(personaUrl);
+    }
+
+    const payload = {
+      model: EDIT_MODEL,
+      callBackUrl: CALLBACK,
+      input: {
+        prompt: finalPrompt,
+        output_format: "png",
+        image_size,
+        task_type: "image_edit",
+        image_urls: imageUrls,
+      },
+    };
+
+    try {
+      console.debug("[KIE][ugc-product] payload", { 
+        model: payload.model, 
+        input: {
+          ...payload.input,
+          image_urls: payload.input.image_urls ? `[${payload.input.image_urls.length} URLs]` : undefined 
+        }
+      });
+    } catch {}
+
+    const createRes = await fetch(`${KIE_API_BASE}/api/v1/jobs/createTask`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${KIE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const createJson = await createRes.json().catch(() => ({}));
+    try { 
+      console.debug("[KIE][ugc-product] response", { 
+        status: createRes.status, 
+        ok: createRes.ok, 
+        body: createJson 
+      }); 
+    } catch {}
+
+    if (!createRes.ok || createJson?.code !== 200) {
+      return NextResponse.json(
+        { 
+          ok: false, 
+          error: `Create task failed: ${createJson?.msg || createRes.status}`, 
+          raw: createJson, 
+          modelUsed: EDIT_MODEL, 
+          hadProductUrl: Boolean(productUrl),
+          hadPersonaUrl: Boolean(personaUrl),
+          personaMode
+        },
+        { status: 502 }
+      );
+    }
+
+    const taskId: string | undefined = createJson?.data?.taskId;
+    if (!taskId) return NextResponse.json({ ok: false, error: "Missing taskId in response", raw: createJson }, { status: 502 });
+
+    return NextResponse.json({ ok: true, taskId, modelUsed: EDIT_MODEL });
+  } catch (err: any) {
+    return NextResponse.json({ ok: false, error: err?.message || "Unknown error" }, { status: 500 });
+  }
+}

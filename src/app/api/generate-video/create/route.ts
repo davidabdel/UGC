@@ -20,7 +20,10 @@ export async function POST(req: Request) {
     const KIE_API_KEY = env("KIE_API_KEY");
     const KIE_API_BASE = env("KIE_API_BASE") ?? "https://api.kie.ai";
     // According to KIE API docs, valid model names are "veo3" or "veo3_fast"
-    const MODEL = env("KIE_VIDEO_MODEL") ?? "veo3_fast";
+    const envModel = env("KIE_VIDEO_MODEL");
+    console.log("[DEBUG] KIE_VIDEO_MODEL from env:", envModel);
+    const MODEL = envModel ?? "veo3_fast";
+    console.log("[DEBUG] Final MODEL value:", MODEL);
     const CALLBACK = env("KIE_CALLBACK_URL");
 
     if (!KIE_API_KEY) {
@@ -43,7 +46,7 @@ export async function POST(req: Request) {
     const payload: any = {
       prompt: finalPrompt,
       imageUrls: isPublicUrl ? [imageUrl] : [],
-      model: MODEL, // Using MODEL variable which is set to "veo3_fast"
+      model: "veo3_fast", // Force the correct model name directly
       aspectRatio: image_size,
       // Optional flags recommended by docs
       enableFallback: true, // Enable fallback to handle potential errors
@@ -56,7 +59,11 @@ export async function POST(req: Request) {
         ...payload,
         imageUrls: payload.imageUrls && payload.imageUrls.length ? ["<redacted>"] : [],
       });
-    } catch {}
+      console.log("[DEBUG] Raw payload model value:", payload.model);
+      console.log("[DEBUG] Full payload:", JSON.stringify(payload, null, 2));
+    } catch (e) {
+      console.error("[DEBUG] Error logging payload:", e);
+    }
 
     const createRes = await fetch(`${KIE_API_BASE}/api/v1/veo/generate`, {
       method: "POST",
