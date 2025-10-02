@@ -3,7 +3,14 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 
 function env(name: string) {
-  return process.env[name];
+  const direct = process.env[name];
+  if (direct !== undefined) return direct;
+  const normalize = (k: string) =>
+    k
+      .replace(/[\u200B-\u200D\uFEFF]/g, "") // zero-width chars
+      .replace(/^\s+|\s+$/g, ""); // trim spaces
+  const foundKey = Object.keys(process.env).find((k) => normalize(k) === name);
+  return foundKey ? process.env[foundKey] : undefined;
 }
 
 export async function POST(req: Request) {
@@ -19,8 +26,31 @@ export async function POST(req: Request) {
     const MODEL = "google/nano-banana" as const;
     const CALLBACK = env("KIE_CALLBACK_URL");
 
+    // Diagnostics: mask secrets, only log presence/length
+    try {
+      const allEnvKeys = Object.keys(process.env);
+      const matchedKieKey = allEnvKeys.find((k) => k.trim() === "KIE_API_KEY") || null;
+      const kieNamedKeys = allEnvKeys.filter((k) => /KIE/i.test(k)).sort();
+      console.debug("[Diag][persona-generate] envs", {
+        has_KIE_API_KEY: Boolean(KIE_API_KEY),
+        KIE_API_KEY_len: KIE_API_KEY?.length ?? 0,
+        matched_env_key_name: matchedKieKey, // shows if there's whitespace variant
+        kie_named_env_keys: kieNamedKeys,     // names only, no values
+        KIE_API_BASE,
+        has_CALLBACK: Boolean(CALLBACK),
+        NODE_ENV: process.env.NODE_ENV,
+      });
+    } catch {}
+
     if (!KIE_API_KEY) {
-      return NextResponse.json({ ok: false, error: "KIE_API_KEY not configured" }, { status: 500 });
+      try {
+        const allEnvKeys = Object.keys(process.env);
+        const kieNamedKeys = allEnvKeys.filter((k) => /KIE/i.test(k)).sort();
+        console.debug("[Diag][persona-generate] missing KIE_API_KEY", { kie_named_env_keys: kieNamedKeys });
+        return NextResponse.json({ ok: false, error: "KIE_API_KEY not configured", kie_named_env_keys: kieNamedKeys }, { status: 500 });
+      } catch {
+        return NextResponse.json({ ok: false, error: "KIE_API_KEY not configured" }, { status: 500 });
+      }
     }
 
     const image_size = ["16:9", "9:16", "1:1"].includes(aspectRatio) ? aspectRatio : "auto";

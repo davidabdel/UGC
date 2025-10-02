@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { getUserCredits, spendUserCredits } from "@/lib/subscription-service";
+import { InsufficientCreditsDialog } from "@/components/InsufficientCreditsDialog";
 
 const steps = [
   { id: 1, title: "Ad Type" },
@@ -15,6 +18,13 @@ const steps = [
 export default function CreateWizardPage() {
   const [step, setStep] = useState(1);
   const router = useRouter();
+  const { user } = useAuth();
+  const [credits, setCredits] = useState<number | null>(null);
+  const [isLoadingCredits, setIsLoadingCredits] = useState(false);
+
+  // Insufficient credits dialog state
+  const [insufficientOpen, setInsufficientOpen] = useState(false);
+  const [requiredCredits, setRequiredCredits] = useState<number>(0);
 
   // Form state (mocked, UI only)
   const [adType, setAdType] = useState<"product" | "talking" | "ugc_product" | null>(null);
@@ -72,6 +82,26 @@ export default function CreateWizardPage() {
   const words = useMemo(() => (dialogue.trim() ? dialogue.trim().split(/\s+/).length : 0), [dialogue]);
   const chars = dialogue.length;
   const dialogueOk = words <= 22 && chars <= 150 && words > 0;
+
+  // Load current user's credits once on mount/login
+  useEffect(() => {
+    const load = async () => {
+      if (!user) {
+        setCredits(null);
+        return;
+      }
+      setIsLoadingCredits(true);
+      try {
+        const res = await getUserCredits(user.id);
+        setCredits(res.success && res.credits ? res.credits.balance : 0);
+      } catch {
+        setCredits(0);
+      } finally {
+        setIsLoadingCredits(false);
+      }
+    };
+    load();
+  }, [user]);
 
   const canContinue = useMemo(() => {
     switch (step) {
@@ -243,6 +273,17 @@ export default function CreateWizardPage() {
 
   // Generate video using Veo 3 Fast via our API
   const generateVideo = async () => {
+    // Minimal guard: require 70+ credits before generating video
+    if (!user) {
+      alert("Please log in to generate videos.");
+      router.push("/login");
+      return;
+    }
+    if (!isLoadingCredits && (credits ?? 0) < 70) {
+      setRequiredCredits(70);
+      setInsufficientOpen(true);
+      return;
+    }
     setVideoGenerating(true);
     setVideoStatus("Starting render…");
     setVideoStage("Starting");
@@ -383,6 +424,13 @@ export default function CreateWizardPage() {
               setVideoStatus("Video ready.");
               setVideoStage("Complete");
               setVideoPct(100);
+              // Deduct 70 credits on success (fire and forget)
+              try {
+                if (user) {
+                  spendUserCredits(user.id, 70, 'Video generation');
+                  setCredits((c) => (typeof c === 'number' ? Math.max(0, c - 70) : c));
+                }
+              } catch {}
               // Auto-save to My Projects (localStorage)
               try {
                 const key = "ugc_projects";
@@ -591,6 +639,17 @@ export default function CreateWizardPage() {
   };
 
   const createImage = async () => {
+    // Minimal guard: require 30+ credits before generating
+    if (!user) {
+      alert("Please log in to generate images.");
+      router.push("/login");
+      return;
+    }
+    if (!isLoadingCredits && (credits ?? 0) < 30) {
+      setRequiredCredits(30);
+      setInsufficientOpen(true);
+      return;
+    }
     setIsGenerating(true);
     setGenStatus("Starting generation…");
     try {
@@ -678,6 +737,13 @@ export default function CreateWizardPage() {
           const imageUrl = data.imageUrl as string;
           setGeneratedImageUrl(imageUrl);
           setGenStatus("Image ready.");
+          // Deduct 30 credits on success (fire and forget)
+          try {
+            if (user) {
+              spendUserCredits(user.id, 30, 'Image generation');
+              setCredits((c) => (typeof c === 'number' ? Math.max(0, c - 30) : c));
+            }
+          } catch {}
           
           // Auto-save to My Projects
           try {
@@ -749,6 +815,13 @@ export default function CreateWizardPage() {
             if (url) {
               setGeneratedImageUrl(url);
               setGenStatus("Image ready.");
+              // Deduct 30 credits on success (fire and forget)
+              try {
+                if (user) {
+                  spendUserCredits(user.id, 30, 'Image generation');
+                  setCredits((c) => (typeof c === 'number' ? Math.max(0, c - 30) : c));
+                }
+              } catch {}
               
               // Auto-save to My Projects
               try {
@@ -1378,6 +1451,14 @@ export default function CreateWizardPage() {
           </div>
         </div>
       </div>
+
+      {/* Insufficient Credits Dialog */}
+      <InsufficientCreditsDialog
+        open={insufficientOpen}
+        onOpenChange={setInsufficientOpen}
+        required={requiredCredits}
+        current={credits}
+      />
     </div>
   );
 }

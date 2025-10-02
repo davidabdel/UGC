@@ -3,7 +3,10 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 
 function env(name: string) {
-  return process.env[name];
+  const direct = process.env[name];
+  if (direct !== undefined) return direct;
+  const foundKey = Object.keys(process.env).find((k) => k.trim() === name);
+  return foundKey ? process.env[foundKey] : undefined;
 }
 
 export async function POST(req: Request) {
@@ -20,6 +23,20 @@ export async function POST(req: Request) {
     const EDIT_MODEL = "google/nano-banana-edit" as const; // edit model
     const CALLBACK = env("KIE_CALLBACK_URL");
     const KIE_UPLOAD_BASE = env("KIE_UPLOAD_BASE") ?? "https://kieai.redpandaai.co";
+
+    // Diagnostics: mask secrets, only log presence/length and key names
+    try {
+      const allEnvKeys = Object.keys(process.env);
+      const matchedKieKey = allEnvKeys.find((k) => k.trim() === "KIE_API_KEY") || null;
+      const kieNamedKeys = allEnvKeys.filter((k) => /KIE/i.test(k)).sort();
+      console.debug("[Diag][persona-upload] envs", {
+        has_KIE_API_KEY: Boolean(KIE_API_KEY),
+        KIE_API_KEY_len: KIE_API_KEY?.length ?? 0,
+        matched_env_key_name: matchedKieKey,
+        kie_named_env_keys: kieNamedKeys,
+        KIE_API_BASE,
+      });
+    } catch {}
 
     if (!KIE_API_KEY) {
       return NextResponse.json({ ok: false, error: "KIE_API_KEY not configured" }, { status: 500 });

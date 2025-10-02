@@ -3,6 +3,30 @@ import { Button } from "@/components/ui/button";
 export default function Home() {
   return (
     <div className="min-h-screen bg-[color:var(--surface)] text-[color:var(--text)]">
+      {/* Header */}
+      <header className="sticky top-0 z-20 border-b border-white/10 bg-[#0B0B10]/70 backdrop-blur supports-[backdrop-filter]:bg-[#0B0B10]/40">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
+          <div className="flex items-center gap-6">
+            <Link href="/" className="font-extrabold tracking-tight">
+              ChatUGC
+            </Link>
+            <nav className="hidden md:flex items-center gap-4 text-sm text-white/80">
+              <Link href="/#pricing" className="hover:underline">Pricing</Link>
+              <Link href="/#demo" className="hover:underline">Demo</Link>
+              <Link href="/help" className="hover:underline">Help</Link>
+            </nav>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link href="/login" className="text-sm text-white/80 hover:text-white hover:underline px-3 py-2">
+              Login
+            </Link>
+            <Link href="/register" className="text-sm bg-gradient-to-r from-[color:var(--brand)] to-[color:var(--brand-2)] text-white px-4 py-2 rounded-full hover:opacity-90">
+              Sign Up
+            </Link>
+          </div>
+        </div>
+      </header>
+
       {/* Hero */}
       <section className="relative hero-gradient">
         <div className="relative mx-auto max-w-5xl px-6 pt-24 pb-8 text-center">

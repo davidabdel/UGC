@@ -2,14 +2,17 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { PropsWithChildren, useEffect } from "react";
+import { PropsWithChildren, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import LoadingScreen from "@/components/ui/LoadingScreen";
+import { getUserCredits } from "@/lib/subscription-service";
 
 const nav = [
   { href: "/app", label: "Home" },
   { href: "/app/create", label: "Create New Ad" },
   { href: "/app/projects", label: "My Projects" },
+  { href: "/app/media", label: "Media Library" },
+  { href: "/app/subscription", label: "Subscription" },
   { href: "/app/profile", label: "Profile" },
   { href: "/app/settings", label: "Settings" },
 ];
@@ -18,12 +21,39 @@ export default function AppLayout({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const { user, isLoading, signOut } = useAuth();
   const router = useRouter();
+  const [credits, setCredits] = useState<number | null>(null);
+  const [isLoadingCredits, setIsLoadingCredits] = useState(false);
   
   useEffect(() => {
     if (!isLoading && !user) {
       router.push('/login');
     }
   }, [user, isLoading, router]);
+  
+  useEffect(() => {
+    async function loadCredits() {
+      if (!user) return;
+      
+      setIsLoadingCredits(true);
+      try {
+        const result = await getUserCredits(user.id);
+        if (result.success && result.credits) {
+          setCredits(result.credits.balance);
+        } else {
+          // If no credits found, display 0 (they'll be created when visiting subscription page)
+          setCredits(0);
+        }
+      } catch (error) {
+        console.error('Error loading credits:', error);
+        // On error, still show 0 credits
+        setCredits(0);
+      } finally {
+        setIsLoadingCredits(false);
+      }
+    }
+    
+    loadCredits();
+  }, [user]);
   
   if (isLoading) {
     return <LoadingScreen />;
@@ -44,7 +74,12 @@ export default function AppLayout({ children }: PropsWithChildren) {
             </nav>
           </div>
           <div className="flex items-center gap-3">
-            <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs">12 credits</span>
+            <Link 
+              href="/app/subscription" 
+              className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs hover:bg-white/15 transition-colors"
+            >
+              {isLoadingCredits ? '...' : credits !== null ? `${credits} credits` : 'Credits'}
+            </Link>
             <button className="rounded-full border border-white/15 bg-white/10 h-9 w-9" aria-label="Notifications" />
             <div className="relative group">
               <button className="rounded-full border border-white/15 bg-white/10 h-9 w-9 flex items-center justify-center" aria-label="Account">
