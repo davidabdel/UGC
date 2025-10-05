@@ -65,9 +65,9 @@ export default function AppLayout({ children }: PropsWithChildren) {
           <div className="flex items-center gap-6">
             <Link href="/" className="flex items-center">
               <img 
-                src="/Images/logos/logo_ua.png" 
+                src="/Images/logos/logo.png" 
                 alt="UnrealAdz Logo" 
-                className="h-8 w-auto" 
+                className="h-10 w-auto" 
               />
             </Link>
           </div>
