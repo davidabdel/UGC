@@ -29,6 +29,31 @@ export default function SubscriptionPage() {
   const [error, setError] = useState<string | null>(null)
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
   
+  // Stripe Payment Links (from env). Used to route paid plan selections to Stripe Checkout
+  const links = {
+    lite: {
+      monthly: process.env.NEXT_PUBLIC_STRIPE_LINK_LITE_MONTHLY || '#',
+      yearly: process.env.NEXT_PUBLIC_STRIPE_LINK_LITE_ANNUAL || '#',
+    },
+    business: {
+      monthly: process.env.NEXT_PUBLIC_STRIPE_LINK_BUSINESS_MONTHLY || '#',
+      yearly: process.env.NEXT_PUBLIC_STRIPE_LINK_BUSINESS_ANNUAL || '#',
+    },
+    heavy: {
+      monthly: process.env.NEXT_PUBLIC_STRIPE_LINK_HEAVY_MONTHLY || '#',
+      yearly: process.env.NEXT_PUBLIC_STRIPE_LINK_HEAVY_ANNUAL || '#',
+    },
+  } as const
+
+  const getStripeLinkForPlan = (planName: string) => {
+    const key = planName.toLowerCase()
+    const cycle = billingCycle === 'yearly' ? 'yearly' : 'monthly'
+    if (key === 'lite') return links.lite[cycle]
+    if (key === 'business') return links.business[cycle]
+    if (key === 'heavy') return links.heavy[cycle]
+    return '#'
+  }
+  
   useEffect(() => {
     async function loadSubscriptionData() {
       if (!user) return
@@ -566,21 +591,36 @@ export default function SubscriptionPage() {
                       ))}
                     </ul>
                     
-                    <button
-                      onClick={() => handleChangePlan(plan.id)}
-                      disabled={isChangingPlan || isCurrentPlan}
-                      className={`w-full py-2 rounded-lg transition ${
-                        isCurrentPlan
-                          ? 'bg-white/10 text-white/50 cursor-not-allowed'
-                          : 'bg-gradient-to-r from-[color:var(--brand)] to-[color:var(--brand-2)] text-white hover:opacity-90'
-                      }`}
-                    >
-                      {isChangingPlan
-                        ? 'Processing...'
-                        : isCurrentPlan
-                        ? 'Current Plan'
-                        : 'Select Plan'}
-                    </button>
+                    {price === 0 ? (
+                      <button
+                        onClick={() => handleChangePlan(plan.id)}
+                        disabled={isChangingPlan || isCurrentPlan}
+                        className={`w-full py-2 rounded-lg transition ${
+                          isCurrentPlan
+                            ? 'bg-white/10 text-white/50 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-[color:var(--brand)] to-[color:var(--brand-2)] text-white hover:opacity-90'
+                        }`}
+                      >
+                        {isChangingPlan
+                          ? 'Processing...'
+                          : isCurrentPlan
+                          ? 'Current Plan'
+                          : 'Start free'}
+                      </button>
+                    ) : (
+                      <a
+                        href={getStripeLinkForPlan(plan.name)}
+                        target={getStripeLinkForPlan(plan.name) !== '#' ? '_blank' : undefined}
+                        rel="noreferrer"
+                        className={`block text-center w-full py-2 rounded-lg transition ${
+                          isCurrentPlan
+                            ? 'bg-white/10 text-white/50 cursor-not-allowed pointer-events-none'
+                            : 'bg-gradient-to-r from-[color:var(--brand)] to-[color:var(--brand-2)] text-white hover:opacity-90'
+                        }`}
+                      >
+                        {isCurrentPlan ? 'Current Plan' : 'Select Plan'}
+                      </a>
+                    )}
                   </div>
                 );
               })}

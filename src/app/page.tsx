@@ -8,7 +8,7 @@ export default function Home() {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
           <div className="flex items-center gap-6">
             <Link href="/" className="font-extrabold tracking-tight">
-              ChatUGC
+              UnrealAdz
             </Link>
             <nav className="hidden md:flex items-center gap-4 text-sm text-white/80">
               <Link href="/#pricing" className="hover:underline">Pricing</Link>
@@ -31,7 +31,7 @@ export default function Home() {
       <section className="relative hero-gradient">
         <div className="relative mx-auto max-w-5xl px-6 pt-24 pb-8 text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-1 text-xs text-white/80 shadow-sm">
-            <span>ChatUGC</span>
+            <span>UnrealAdz</span>
             <span className="text-white/50">—</span>
             <span>AI Ads that Win</span>
           </div>
@@ -239,7 +239,7 @@ export default function Home() {
             </div>
           ))}
         </div>
-        <div className="text-center text-xs text-white/50 pb-8">© {new Date().getFullYear()} ChatUGC</div>
+        <div className="text-center text-xs text-white/50 pb-8">© {new Date().getFullYear()} UnrealAdz</div>
       </footer>
 
       {/* Sticky mobile CTA */}

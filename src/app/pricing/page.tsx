@@ -5,66 +5,87 @@ import { useState } from "react";
 export default function PricingPage() {
   const [annual, setAnnual] = useState(true);
 
+  // Pull Stripe Payment Link URLs from env (set in UGC/.env.local)
+  const links = {
+    lite: {
+      monthly: process.env.NEXT_PUBLIC_STRIPE_LINK_LITE_MONTHLY || "#",
+      annual: process.env.NEXT_PUBLIC_STRIPE_LINK_LITE_ANNUAL || "#",
+    },
+    business: {
+      monthly: process.env.NEXT_PUBLIC_STRIPE_LINK_BUSINESS_MONTHLY || "#",
+      annual: process.env.NEXT_PUBLIC_STRIPE_LINK_BUSINESS_ANNUAL || "#",
+    },
+    heavy: {
+      monthly: process.env.NEXT_PUBLIC_STRIPE_LINK_HEAVY_MONTHLY || "#",
+      annual: process.env.NEXT_PUBLIC_STRIPE_LINK_HEAVY_ANNUAL || "#",
+    },
+  } as const;
+
   const plans = [
     {
       name: "Free",
-      price: annual ? "$0" : "$0",
+      price: "$0",
       monthlyPrice: "$0",
       annualPrice: "$0",
       badge: "",
       cta: "Start free",
       features: [
-        "2 videos included",
-        "Basic image generation",
+        "100 credits per month",
+        "Basic UGC generation",
         "Community support",
       ],
-      link: "#",
+      monthlyLink: "#",
+      annualLink: "#",
     },
     {
-      name: "Starter",
-      price: annual ? "$15" : "$19",
-      monthlyPrice: "$19",
-      annualPrice: "$15",
+      name: "Lite",
+      price: "$99",
+      monthlyPrice: "$99",
+      annualPrice: "$999",
       badge: "Most popular",
       cta: "Upgrade",
       features: [
-        "20 videos / month",
-        "Priority rendering",
-        "AI dialogue assist",
+        "50,000 credits per month",
+        "HD quality renders",
+        "Priority processing",
+        "Advanced tools",
         "Email support",
       ],
-      link: "#",
+      monthlyLink: links.lite.monthly,
+      annualLink: links.lite.annual,
     },
     {
-      name: "Pro",
-      price: annual ? "$39" : "$49",
-      monthlyPrice: "$49",
-      annualPrice: "$39",
+      name: "Business",
+      price: "$299",
+      monthlyPrice: "$299",
+      annualPrice: "$2999",
       badge: "",
       cta: "Upgrade",
       features: [
-        "Unlimited videos",
-        "Faster queues",
-        "Team notes",
-        "Brand presets",
+        "150,000 credits per month",
+        "Team collaboration",
+        "API access",
         "Priority support",
+        "Faster queues",
       ],
-      link: "#",
+      monthlyLink: links.business.monthly,
+      annualLink: links.business.annual,
     },
     {
-      name: "Enterprise",
-      price: "Custom",
-      monthlyPrice: "Custom",
-      annualPrice: "Custom",
+      name: "Heavy",
+      price: "$799",
+      monthlyPrice: "$799",
+      annualPrice: "$7999",
       badge: "New",
       cta: "Contact sales",
       features: [
-        "SLA & SSO",
+        "400,000 credits per month",
         "Dedicated capacity",
-        "Custom voices/styles",
-        "Compliance & security",
+        "Higher priority",
+        "SLA options",
       ],
-      link: "#",
+      monthlyLink: links.heavy.monthly,
+      annualLink: links.heavy.annual,
     },
   ];
 
@@ -107,21 +128,12 @@ export default function PricingPage() {
                 )}
               </div>
               <div className="mt-3 text-4xl font-extrabold">
-                {p.price}
-                {p.price !== "Custom" && (
-                  <span className="text-sm font-normal text-white/60">/mo</span>
-                )}
+                {annual ? p.annualPrice : p.monthlyPrice}
+                <span className="text-sm font-normal text-white/60">{annual ? "/year" : "/mo"}</span>
               </div>
               <div className="mt-1 text-xs text-white/60">
-                {p.price !== "Custom" ? (
-                  <>
-                    Billed {annual ? "yearly" : "monthly"}
-                  </>
-                ) : (
-                  <>Tailored to your needs</>
-                )}
+                Billed {annual ? "yearly" : "monthly"}
               </div>
-
               <ul className="mt-4 space-y-2 text-sm text-white/80">
                 {p.features.slice(0, 10).map((f) => (
                   <li key={f} className="flex items-center gap-2">
@@ -130,11 +142,14 @@ export default function PricingPage() {
                   </li>
                 ))}
               </ul>
-
-              <a href={p.link} className="mt-5 btn-primary text-center">
+              <a
+                href={annual ? (p.annualLink || "#") : (p.monthlyLink || "#")}
+                className="mt-5 btn-primary text-center"
+                target={annual ? (p.annualLink && p.annualLink !== "#" ? "_blank" : undefined) : (p.monthlyLink && p.monthlyLink !== "#" ? "_blank" : undefined)}
+                rel="noreferrer"
+              >
                 {p.cta}
               </a>
-
               <div className="mt-3 text-xs text-white/60">
                 {p.name === "Free" && "Credit-limited, fair use applies"}
                 {p.name === "Starter" && "Includes credits, fair use, priority rendering"}
@@ -170,10 +185,6 @@ export default function PricingPage() {
               <li>• Dedicated CSM for Enterprise.</li>
             </ul>
           </div>
-        </div>
-
-        <div className="mt-12 text-center text-xs text-white/60">
-          Stripe links are placeholders for now.
         </div>
       </main>
     </div>

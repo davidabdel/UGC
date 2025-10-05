@@ -65,7 +65,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
           <div className="flex items-center gap-6">
             <Link href="/" className="font-extrabold tracking-tight">
-              ChatUGC
+              UnrealAdz
             </Link>
             <nav className="hidden md:flex items-center gap-4 text-sm text-white/80">
               <Link href="/app/projects" className="hover:underline">Projects</Link>

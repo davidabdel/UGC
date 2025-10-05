@@ -66,7 +66,7 @@ export default function RegisterPage() {
       <div className="hidden md:block relative hero-gradient">
         <div className="relative mx-auto flex h-full max-w-xl flex-col justify-center gap-6 px-10 py-16 text-white">
           <div className="text-xs uppercase tracking-wider text-white/80">Create your account</div>
-          <h1 className="text-5xl font-extrabold leading-tight">Join ChatUGC</h1>
+          <h1 className="text-5xl font-extrabold leading-tight">Join UnrealAdz</h1>
           <p className="text-white/85">Start generating premium UGC ads with one image and a short script.</p>
           <ul className="mt-2 space-y-2 text-white/85 text-sm">
             <li>• Persona generation with Gemini</li>
