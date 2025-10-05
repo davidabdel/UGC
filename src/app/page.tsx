@@ -9,8 +9,8 @@ export default function Home() {
           <div className="flex items-center gap-6">
             <Link href="/" className="flex items-center">
               <img 
-                src="/Images/logos/logo.png" 
-                alt="UnrealAdz Logo" 
+                src="/Images/logos/logo_ua.png" 
+                alt="StageMate AI Logo" 
                 className="h-10 w-auto" 
               />
             </Link>

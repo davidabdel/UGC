@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "UnrealAdz — AI Ads that Win",
+  title: "StageMate AI — Snap. Stage. Sell.",
   description: "Generate scroll‑stopping UGC ads from a single image and a short script.",
   icons: {
     icon: "/Images/logos/favicon 192.png",
