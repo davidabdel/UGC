@@ -14,7 +14,6 @@ const nav = [
   { href: "/app/media", label: "Media Library" },
   { href: "/app/subscription", label: "Subscription" },
   { href: "/app/profile", label: "Profile" },
-  { href: "/app/settings", label: "Settings" },
 ];
 
 export default function AppLayout({ children }: PropsWithChildren) {
