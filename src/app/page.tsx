@@ -32,8 +32,8 @@ export default function Home() {
           <div className="flex justify-center mb-4">
             <img 
               src="/Images/logos/UA.png" 
-              alt="UnrealAdz Logo" 
-              className="h-12 w-auto" 
+              alt="StageMate AI Logo" 
+              className="h-16 w-auto" 
             />
           </div>
           <h1 className="mt-6 text-5xl font-extrabold tracking-tight sm:text-6xl">
