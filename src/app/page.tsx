@@ -42,7 +42,7 @@ export default function Home() {
           </p>
           <div className="mt-8 flex items-center justify-center gap-3">
             <Button asChild className="rounded-full px-5 py-6 text-base font-semibold bg-gradient-to-r from-[color:var(--brand)] to-[color:var(--brand-2)] text-white">
-              <Link href="#pricing">Get started</Link>
+              <Link href="/register">Get started</Link>
             </Button>
             <Button asChild variant="outline" className="rounded-full border-white/20 bg-white/10 text-white hover:bg-white/15">
               <Link href="#demo">Watch demo</Link>
@@ -191,33 +191,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Pricing strip */}
-      <section id="pricing" className="mx-auto max-w-6xl px-6 py-16">
-        <h2 className="text-3xl font-bold text-center">Pricing</h2>
-        <div className="mt-8 grid gap-6 md:grid-cols-4">
-          {[
-            { name: "Free", price: "$0", cta: "Start free" },
-            { name: "Starter", price: "$19", cta: "Upgrade" },
-            { name: "Pro", price: "$49", cta: "Upgrade" },
-            { name: "Enterprise", price: "Custom", cta: "Contact" },
-          ].map((p) => (
-            <div key={p.name} className="glass-card flex flex-col">
-              <div className="text-xs text-white/60">{p.name}</div>
-              <div className="mt-2 text-3xl font-bold">{p.price}
-                <span className="text-sm font-normal text-white/60">/mo</span>
-              </div>
-              <ul className="mt-3 text-sm text-white/75 space-y-1">
-                <li>• High-quality renders</li>
-                <li>• Credits included</li>
-                <li>• Priority rendering</li>
-              </ul>
-              <Button asChild className="mt-4 rounded-full bg-gradient-to-r from-[color:var(--brand)] to-[color:var(--brand-2)] text-white">
-                <Link href="/pricing">{p.cta}</Link>
-              </Button>
-            </div>
-          ))}
-        </div>
-      </section>
 
       {/* Footer */}
       <footer className="border-t border-white/10">
@@ -249,7 +222,7 @@ export default function Home() {
             <div className="text-white/60">Free plan available</div>
           </div>
           <Button asChild className="rounded-full bg-gradient-to-r from-[color:var(--brand)] to-[color:var(--brand-2)] text-white">
-            <Link href="/pricing">Get started</Link>
+            <Link href="/register">Get started</Link>
           </Button>
         </div>
       </div>
