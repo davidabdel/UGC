@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { PropsWithChildren, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -64,10 +65,14 @@ export default function AppLayout({ children }: PropsWithChildren) {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
           <div className="flex items-center gap-6">
             <Link href="/" className="flex items-center">
-              <img 
-                src="/Images/logos/logo_ua.png" 
-                alt="StageMate AI Logo" 
-                className="h-10 w-auto" 
+              <Image
+                src="/Images/logos/logo_ua.png"
+                alt="UnrealAdz"
+                width={200}
+                height={40}
+                unoptimized
+                priority
+                className="h-10 w-auto"
               />
             </Link>
           </div>

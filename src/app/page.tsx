@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 export default function Home() {
   return (
@@ -8,10 +9,14 @@ export default function Home() {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
           <div className="flex items-center gap-6">
             <Link href="/" className="flex items-center">
-              <img 
-                src="/Images/logos/logo_ua.png" 
-                alt="StageMate AI Logo" 
-                className="h-10 w-auto" 
+              <Image
+                src="/Images/logos/logo_ua.png"
+                alt="UnrealAdz"
+                width={200}
+                height={40}
+                unoptimized
+                priority
+                className="h-10 w-auto"
               />
             </Link>
           </div>
@@ -30,10 +35,14 @@ export default function Home() {
       <section className="relative hero-gradient">
         <div className="relative mx-auto max-w-5xl px-6 pt-24 pb-8 text-center">
           <div className="flex justify-center mb-4">
-            <img 
-              src="/Images/logos/UA.png" 
-              alt="StageMate AI Logo" 
-              className="h-16 w-auto" 
+            <Image
+              src="/Images/logos/UA.png"
+              alt="UnrealAdz"
+              width={220}
+              height={60}
+              unoptimized
+              priority
+              className="h-16 w-auto"
             />
           </div>
           <h1 className="mt-6 text-5xl font-extrabold tracking-tight sm:text-6xl">
