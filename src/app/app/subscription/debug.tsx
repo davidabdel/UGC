@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useAuth } from '@/context/AuthContext'
-import { createSupabaseClient } from '@/lib/supabase'
+import { createSupabaseBrowserClient } from '@/lib/supabase'
 
 export default function SubscriptionDebug() {
   const { user } = useAuth()
@@ -11,25 +11,21 @@ export default function SubscriptionDebug() {
   const [error, setError] = useState<string | null>(null)
 
   const checkSubscription = async () => {
-    // Get the current user from the context
-    if (!user) {
-      // Try to get the session directly
-      const supabase = createSupabaseClient()
-      const { data: sessionData } = await supabase.auth.getSession()
-      
-      if (!sessionData?.session?.user) {
-        setError('No user logged in. Please log in first.')
-        return
-      }
-      
-      // Use the user from the session
-      const currentUser = sessionData.session.user
+    // Always get the user from Supabase session (works even if context is stale)
+    const supabase = createSupabaseBrowserClient()
+    const { data: sessionData } = await supabase.auth.getSession()
+    const currentUser = sessionData?.session?.user
+
+    if (!currentUser) {
+      setError('No user logged in. Please log in first.')
+      return
+    }
 
     setIsLoading(true)
     setError(null)
     
     try {
-      const supabase = createSupabaseClient()
+      
       
       // Direct query to check if subscription exists
       const { data: subscription, error: subError } = await supabase
@@ -86,7 +82,7 @@ export default function SubscriptionDebug() {
 
   const createSubscription = async () => {
     // Get the current user even if the context doesn't have it
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseBrowserClient()
     const { data: userData, error: userError } = await supabase.auth.getUser()
     
     if (userError || !userData?.user) {
@@ -101,7 +97,7 @@ export default function SubscriptionDebug() {
     setError(null)
     
     try {
-      const supabase = createSupabaseClient()
+      const supabase = createSupabaseBrowserClient()
       
       // Get the free plan ID - case insensitive search
       const { data: plans, error: plansError } = await supabase
@@ -114,12 +110,12 @@ export default function SubscriptionDebug() {
       }
       
       // Find a plan with name 'Free' (case insensitive)
-      const freePlan = plans.find(plan => 
+      const freePlan = plans.find((plan: { name: string; id: string }) => 
         plan.name.toLowerCase() === 'free'
       )
       
       if (!freePlan) {
-        throw new Error('Free plan not found. Available plans: ' + plans.map(p => p.name).join(', '))
+        throw new Error('Free plan not found. Available plans: ' + plans.map((p: { name: string }) => p.name).join(', '))
       }
       
       // Create subscription directly
@@ -187,7 +183,7 @@ export default function SubscriptionDebug() {
 
   const callSetupFunction = async () => {
     // Get the current user even if the context doesn't have it
-    const supabase = createSupabaseClient()
+    const supabase = createSupabaseBrowserClient()
     const { data: userData, error: userError } = await supabase.auth.getUser()
     
     if (userError || !userData?.user) {
@@ -202,7 +198,7 @@ export default function SubscriptionDebug() {
     setError(null)
     
     try {
-      const supabase = createSupabaseClient()
+      const supabase = createSupabaseBrowserClient()
       
       // Call the setup_user_subscription function
       const { data, error } = await supabase.rpc('setup_user_subscription', {

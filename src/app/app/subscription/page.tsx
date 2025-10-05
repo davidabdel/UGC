@@ -499,38 +499,10 @@ export default function SubscriptionPage() {
             )}
           </div>
           
-          {/* Debug Info - Only visible in development */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="glass-card mb-8 border border-yellow-500/50">
-              <h2 className="text-xl font-semibold mb-4">Debug Information</h2>
-              <div className="space-y-2">
-                <div>
-                  <h3 className="text-sm font-medium">Subscription Status:</h3>
-                  <pre className="bg-black/30 p-2 rounded-lg overflow-auto text-xs mt-1">
-                    {JSON.stringify(subscription, null, 2)}
-                  </pre>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium">Current Plan:</h3>
-                  <pre className="bg-black/30 p-2 rounded-lg overflow-auto text-xs mt-1">
-                    {JSON.stringify(currentPlan, null, 2)}
-                  </pre>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium">Credits:</h3>
-                  <pre className="bg-black/30 p-2 rounded-lg overflow-auto text-xs mt-1">
-                    {JSON.stringify(credits, null, 2)}
-                  </pre>
-                </div>
-              </div>
-            </div>
-          )}
-          
           {/* Available Plans */}
           <div id="available-plans">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold">Available Plans</h2>
-              
               <div className="flex items-center p-1 bg-white/5 rounded-lg">
                 <button
                   onClick={() => setBillingCycle('monthly')}
