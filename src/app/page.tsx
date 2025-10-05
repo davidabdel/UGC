@@ -29,10 +29,12 @@ export default function Home() {
       {/* Hero */}
       <section className="relative hero-gradient">
         <div className="relative mx-auto max-w-5xl px-6 pt-24 pb-8 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-1 text-xs text-white/80 shadow-sm">
-            <span>UnrealAdz</span>
-            <span className="text-white/50">—</span>
-            <span>AI Ads that Win</span>
+          <div className="flex justify-center mb-4">
+            <img 
+              src="/Images/logos/UA.png" 
+              alt="UnrealAdz Logo" 
+              className="h-12 w-auto" 
+            />
           </div>
           <h1 className="mt-6 text-5xl font-extrabold tracking-tight sm:text-6xl">
             AI Ads that win.
