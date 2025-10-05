@@ -57,7 +57,10 @@ export async function POST(req: Request) {
         const inputBuf = Buffer.from(await (file as File).arrayBuffer());
         const outBuf = await sharp(inputBuf).jpeg({ quality: 90 }).toBuffer();
         const outName = ((file as File).name || "upload").replace(/\.(heic|heif)$/i, ".jpg");
-        workingFile = new File([outBuf], outName, { type: "image/jpeg" });
+        // Copy into a fresh ArrayBuffer to satisfy File/Blob typing
+        const ab = new ArrayBuffer(outBuf.byteLength);
+        new Uint8Array(ab).set(outBuf);
+        workingFile = new File([ab], outName, { type: "image/jpeg" });
       } catch (err) {
         return NextResponse.json(
           { ok: false, error: "HEIC/HEIF conversion failed; please install sharp or upload PNG/JPG/WebP" },
@@ -145,7 +148,8 @@ export async function POST(req: Request) {
     if (!taskId) return NextResponse.json({ ok: false, error: "Missing taskId in response", raw: createJson }, { status: 502 });
 
     return NextResponse.json({ ok: true, taskId, modelUsed: EDIT_MODEL, uploadedUrl });
-  } catch (err: any) {
-    return NextResponse.json({ ok: false, error: err?.message || "Unknown error" }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err && typeof err === 'object' && 'message' in err ? String((err as any).message) : 'Unknown error';
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

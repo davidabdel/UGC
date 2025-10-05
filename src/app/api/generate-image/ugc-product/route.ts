@@ -36,30 +36,12 @@ export async function POST(req: Request) {
     let productUrl: string | undefined;
     let personaUrl: string | undefined;
 
-    // Process product file (convert HEIC if needed)
-    let workingProductFile: File = productFile;
-    const isProductHeic = /heic|heif/i.test((productFile as File).type || "") || /\\.(heic|heif)$/i.test((productFile as File).name || "");
-    if (isProductHeic) {
-      try {
-        const sharp = (await import("sharp")).default;
-        const inputBuf = Buffer.from(await (productFile as File).arrayBuffer());
-        const outBuf = await sharp(inputBuf).jpeg({ quality: 90 }).toBuffer();
-        const outName = ((productFile as File).name || "upload").replace(/\\.(heic|heif)$/i, ".jpg");
-        workingProductFile = new File([outBuf], outName, { type: "image/jpeg" });
-      } catch (err) {
-        return NextResponse.json(
-          { ok: false, error: "HEIC/HEIF conversion failed; please install sharp or upload PNG/JPG/WebP" },
-          { status: 500 }
-        );
-      }
-    }
-
     // Upload product image
     try {
       const fd = new FormData();
-      fd.append("file", workingProductFile);
+      fd.append("file", productFile);
       fd.append("uploadPath", "ugc-factory");
-      fd.append("fileName", workingProductFile.name);
+      fd.append("fileName", (productFile as File).name);
       const upRes = await fetch(`${KIE_UPLOAD_BASE}/api/file-stream-upload`, {
         method: "POST",
         headers: { Authorization: `Bearer ${KIE_API_KEY}` },
@@ -73,12 +55,12 @@ export async function POST(req: Request) {
 
     if (!productUrl) {
       try {
-        const arr = await (workingProductFile as File).arrayBuffer();
+        const arr = await (productFile as File).arrayBuffer();
         const b64 = Buffer.from(arr).toString("base64");
         const payload = {
-          fileBase64: `data:${(workingProductFile as File).type || "image/jpeg"};base64,${b64}`,
+          fileBase64: `data:${(productFile as File).type || "image/jpeg"};base64,${b64}`,
           uploadPath: "ugc-factory",
-          fileName: (workingProductFile as File).name || "upload.jpg",
+          fileName: (productFile as File).name || "upload.jpg",
         };
         const upRes = await fetch(`${KIE_UPLOAD_BASE}/api/file-base64-upload`, {
           method: "POST",
@@ -98,29 +80,21 @@ export async function POST(req: Request) {
 
     // Process persona file if provided
     if (personaFile instanceof File) {
-      let workingPersonaFile: File = personaFile;
-      const isPersonaHeic = /heic|heif/i.test((personaFile as File).type || "") || /\\.(heic|heif)$/i.test((personaFile as File).name || "");
-      if (isPersonaHeic) {
-        try {
-          const sharp = (await import("sharp")).default;
-          const inputBuf = Buffer.from(await (personaFile as File).arrayBuffer());
-          const outBuf = await sharp(inputBuf).jpeg({ quality: 90 }).toBuffer();
-          const outName = ((personaFile as File).name || "upload").replace(/\\.(heic|heif)$/i, ".jpg");
-          workingPersonaFile = new File([outBuf], outName, { type: "image/jpeg" });
-        } catch (err) {
-          return NextResponse.json(
-            { ok: false, error: "HEIC/HEIF conversion failed for persona image" },
-            { status: 500 }
-          );
-        }
+      // Only accept JPG/PNG files directly
+      const fileType = (personaFile as File).type || "";
+      if (!/^image\/(jpeg|png|jpg|webp)/i.test(fileType)) {
+        return NextResponse.json(
+          { ok: false, error: "Only JPG, PNG and WebP files are supported for persona images" },
+          { status: 400 }
+        );
       }
 
       // Upload persona image
       try {
         const fd = new FormData();
-        fd.append("file", workingPersonaFile);
+        fd.append("file", personaFile);
         fd.append("uploadPath", "ugc-factory");
-        fd.append("fileName", workingPersonaFile.name);
+        fd.append("fileName", (personaFile as File).name);
         const upRes = await fetch(`${KIE_UPLOAD_BASE}/api/file-stream-upload`, {
           method: "POST",
           headers: { Authorization: `Bearer ${KIE_API_KEY}` },
@@ -134,12 +108,12 @@ export async function POST(req: Request) {
 
       if (!personaUrl) {
         try {
-          const arr = await (workingPersonaFile as File).arrayBuffer();
+          const arr = await (personaFile as File).arrayBuffer();
           const b64 = Buffer.from(arr).toString("base64");
           const payload = {
-            fileBase64: `data:${(workingPersonaFile as File).type || "image/jpeg"};base64,${b64}`,
+            fileBase64: `data:${(personaFile as File).type || "image/jpeg"};base64,${b64}`,
             uploadPath: "ugc-factory",
-            fileName: (workingPersonaFile as File).name || "upload.jpg",
+            fileName: (personaFile as File).name || "upload.jpg",
           };
           const upRes = await fetch(`${KIE_UPLOAD_BASE}/api/file-base64-upload`, {
             method: "POST",
