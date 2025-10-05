@@ -7,14 +7,13 @@ export default function Home() {
       <header className="sticky top-0 z-20 border-b border-white/10 bg-[#0B0B10]/70 backdrop-blur supports-[backdrop-filter]:bg-[#0B0B10]/40">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
           <div className="flex items-center gap-6">
-            <Link href="/" className="font-extrabold tracking-tight">
-              UnrealAdz
+            <Link href="/" className="flex items-center">
+              <img 
+                src="/Images/logos/logo_ua.png" 
+                alt="UnrealAdz Logo" 
+                className="h-8 w-auto" 
+              />
             </Link>
-            <nav className="hidden md:flex items-center gap-4 text-sm text-white/80">
-              <Link href="/#pricing" className="hover:underline">Pricing</Link>
-              <Link href="/#demo" className="hover:underline">Demo</Link>
-              <Link href="/help" className="hover:underline">Help</Link>
-            </nav>
           </div>
           <div className="flex items-center gap-3">
             <Link href="/login" className="text-sm text-white/80 hover:text-white hover:underline px-3 py-2">
