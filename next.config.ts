@@ -20,8 +20,8 @@ const nextConfig: NextConfig = {
   typedRoutes: false,
   async rewrites() {
     return [
-      // Serve an SVG icon when the browser requests /favicon.ico
-      { source: "/favicon.ico", destination: "/icon.svg" },
+      // Serve the PNG favicon when the browser requests /favicon.ico
+      { source: "/favicon.ico", destination: "/Images/logos/favicon 192.png" },
     ]
   },
 };
