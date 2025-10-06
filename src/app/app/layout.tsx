@@ -12,7 +12,6 @@ const nav = [
   { href: "/app", label: "Home" },
   { href: "/app/create", label: "Create New Ad" },
   { href: "/app/projects", label: "My Projects" },
-  { href: "/app/media", label: "Media Library" },
   { href: "/app/subscription", label: "Subscription" },
   { href: "/app/profile", label: "Profile" },
 ];
