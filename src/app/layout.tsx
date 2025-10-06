@@ -17,8 +17,8 @@ export const metadata: Metadata = {
   title: "StageMate AI — Snap. Stage. Sell.",
   description: "Generate scroll‑stopping UGC ads from a single image and a short script.",
   icons: {
-    icon: "/Images/logos/favicon 192.png",
-    apple: "/Images/logos/favicon 192.png",
+    icon: "/Images/logos/favicon-192.png",
+    apple: "/Images/logos/favicon-192.png",
   },
 };
 

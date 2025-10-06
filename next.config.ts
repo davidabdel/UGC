@@ -18,12 +18,7 @@ const nextConfig: NextConfig = {
   },
   // Disable typed routes to avoid symlink issues with OneDrive
   typedRoutes: false,
-  async rewrites() {
-    return [
-      // Serve the PNG favicon when the browser requests /favicon.ico
-      { source: "/favicon.ico", destination: "/Images/logos/favicon 192.png" },
-    ]
-  },
+  // No rewrites for favicon — Next will serve from app/icon.* automatically
 };
 
 export default nextConfig;
