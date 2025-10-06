@@ -11,7 +11,7 @@ export async function uploadUserImage(userId: string, file: File) {
     const filePath = `${userId}/${Date.now()}-${file.name.replace(/\s+/g, '_')}`;
     
     // Upload the file to storage
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from('user-images')
       .upload(filePath, file);
       
@@ -58,14 +58,14 @@ export async function uploadUserVideo(userId: string, videoFile: File, thumbnail
     const thumbnailPath = `${userId}/${Date.now()}-thumbnail-${thumbnailFile.name.replace(/\s+/g, '_')}`;
     
     // Upload the video
-    const { data: videoData, error: videoError } = await supabase.storage
+    const { error: videoError } = await supabase.storage
       .from('user-videos')
       .upload(videoPath, videoFile);
       
     if (videoError) throw videoError;
     
     // Upload the thumbnail
-    const { data: thumbnailData, error: thumbnailError } = await supabase.storage
+    const { error: thumbnailError } = await supabase.storage
       .from('thumbnails')
       .upload(thumbnailPath, thumbnailFile);
       

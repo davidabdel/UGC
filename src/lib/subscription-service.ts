@@ -37,7 +37,7 @@ export type CreditTransaction = {
   amount: number;
   description: string;
   created_at: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 };
 
 /**
@@ -256,8 +256,8 @@ export async function changeSubscriptionPlan(userId: string, planId: string) {
       
     if (subError && subError.code !== 'PGRST116') throw subError;
     
-    // Get the new plan details
-    const { data: planData, error: planError } = await supabase
+    // Get the new plan details (we only need to validate existence)
+    const { error: planError } = await supabase
       .from('subscription_plans')
       .select('*')
       .eq('id', planId)

@@ -23,7 +23,7 @@ export async function setupStorageBuckets() {
     // Create each bucket if it doesn't exist
     for (const bucketName of requiredBuckets) {
       if (!existingBuckets.includes(bucketName)) {
-        const { data, error } = await supabase.storage.createBucket(bucketName, {
+        const { error } = await supabase.storage.createBucket(bucketName, {
           public: false, // Set to true if you want the files to be publicly accessible
           fileSizeLimit: 52428800, // 50MB limit (adjust as needed)
         });
