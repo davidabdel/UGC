@@ -229,13 +229,14 @@ export default function Home() {
             { src: "/Videos/webm/4.webm", poster: "/Videos/webm/4.jpg", label: "4" },
             { src: "/Videos/webm/5.webm", poster: "/Videos/webm/5.jpg", label: "5" },
             { src: "/Videos/webm/6.webm", poster: "/Videos/webm/6.jpg", label: "6" },
-          ].map((v) => (
+          ].map((v, i) => (
             <div key={v.src} className="rounded-2xl border border-white/10 bg-white/5 p-3">
               <div className="aspect-[9/16] w-full overflow-hidden rounded-xl border border-white/10 bg-black/40">
                 <HoverPlayVideo
                   src={v.src}
                   poster={v.poster}
                   ariaLabel={`Showcase ${v.label}`}
+                  autoplayOnViewMobile={i === 0}
                   className="h-full w-full object-cover rounded-xl"
                 />
               </div>
