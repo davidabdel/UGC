@@ -1,7 +1,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import HoverPlayVideo from "@/components/HoverPlayVideo";
 import type { ReactNode } from "react";
+import HowItWorks from "@/components/HowItWorks";
 
 // Mini metric card with inline SVG sparkline (no deps)
 function MetricCard({
@@ -15,9 +17,9 @@ function MetricCard({
   series: number[]; // 0..100 range
   color?: string;
 }) {
-  const width = 160;
-  const height = 56;
-  const pad = 6;
+  const width = 280;   // keep card width similar, render SVG scalable
+  const height = 220;  // ~4x previous visual height
+  const pad = 10;
   const max = Math.max(1, ...series);
   const step = (width - pad * 2) / Math.max(1, series.length - 1);
   const points = series.map((v, i) => {
@@ -28,15 +30,15 @@ function MetricCard({
   const path = `M ${points[0] || `${pad},${height - pad}`} L ${points.slice(1).join(" ")}`;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]">
+    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]">
       {/* Glow */}
       <div className="pointer-events-none absolute -inset-20 rounded-[40px] bg-[radial-gradient(ellipse_at_top_left,rgba(139,92,246,0.18),transparent_40%),radial-gradient(ellipse_at_bottom_right,rgba(59,130,246,0.18),transparent_40%)]" />
-      <div className="relative flex items-center justify-between gap-4">
+      <div className="relative flex flex-col gap-3" style={{ minHeight: height }}>
         <div>
-          <div className="text-3xl font-extrabold leading-none">{value}</div>
-          <div className="mt-1 text-xs tracking-wide text-white/70">{label}</div>
+          <div className="text-4xl font-extrabold leading-none">{value}</div>
+          <div className="mt-1 text-sm tracking-wide text-white/70">{label}</div>
         </div>
-        <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="opacity-90">
+        <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="opacity-90 w-full h-auto">
           <defs>
             <linearGradient id="g" x1="0" x2="0" y1="0" y2="1">
               <stop offset="0%" stopColor={color} stopOpacity="0.9" />
@@ -216,51 +218,33 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Showcase reel carousel */}
+      {/* Showcase grid (6 videos, same vertical plane) */}
       <section className="mx-auto max-w-6xl px-6 py-10">
         <h2 className="text-2xl font-bold mb-4">Showcase</h2>
-        <div className="relative">
-          <div className="flex gap-4 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {/* 1. Sydney Harbour */}
-            <div className="min-w-[260px] rounded-2xl border border-white/10 bg-white/5 p-3">
-              <div className="aspect-[9/16] w-[234px] overflow-hidden rounded-xl border border-white/10 bg-black/40">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/Images/SydneyHarbour.png" alt="Showcase Sydney Harbour" className="h-full w-full object-cover" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          {[
+            { src: "/Videos/webm/1.webm", poster: "/Videos/webm/1.jpg", label: "1" },
+            { src: "/Videos/webm/2.webm", poster: "/Videos/webm/2.jpg", label: "2" },
+            { src: "/Videos/webm/3.webm", poster: "/Videos/webm/3.jpg", label: "3" },
+            { src: "/Videos/webm/4.webm", poster: "/Videos/webm/4.jpg", label: "4" },
+            { src: "/Videos/webm/5.webm", poster: "/Videos/webm/5.jpg", label: "5" },
+            { src: "/Videos/webm/6.webm", poster: "/Videos/webm/6.jpg", label: "6" },
+          ].map((v) => (
+            <div key={v.src} className="rounded-2xl border border-white/10 bg-white/5 p-3">
+              <div className="aspect-[9/16] w-full overflow-hidden rounded-xl border border-white/10 bg-black/40">
+                <HoverPlayVideo
+                  src={v.src}
+                  poster={v.poster}
+                  ariaLabel={`Showcase ${v.label}`}
+                  className="h-full w-full object-cover rounded-xl"
+                />
               </div>
-              <div className="mt-2 text-sm text-white/80">Ad #1</div>
             </div>
-
-            {/* 2. buzz.png */}
-            <div className="min-w-[260px] rounded-2xl border border-white/10 bg-white/5 p-3">
-              <div className="aspect-[9/16] w-[234px] overflow-hidden rounded-xl border border-white/10 bg-black/40">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/Images/buzz.png" alt="Showcase buzz" className="h-full w-full object-cover" />
-              </div>
-              <div className="mt-2 text-sm text-white/80">Ad #2</div>
-            </div>
-
-            {/* 3. ai-gen.png */}
-            <div className="min-w-[260px] rounded-2xl border border-white/10 bg-white/5 p-3">
-              <div className="aspect-[9/16] w-[234px] overflow-hidden rounded-xl border border-white/10 bg-black/40">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/Images/ai-gen.png" alt="Showcase ai-gen" className="h-full w-full object-cover" />
-              </div>
-              <div className="mt-2 text-sm text-white/80">Ad #3</div>
-            </div>
-
-            {/* 4. MelbourneCity.png */}
-            <div className="min-w-[260px] rounded-2xl border border-white/10 bg-white/5 p-3">
-              <div className="aspect-[9/16] w-[234px] overflow-hidden rounded-xl border border-white/10 bg-black/40">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/Images/MelbourneCity.png" alt="Showcase Melbourne City" className="h-full w-full object-cover" />
-              </div>
-              <div className="mt-2 text-sm text-white/80">Ad #4</div>
-            </div>
-          </div>
+          ))}
         </div>
       </section>
 
-      {/* Benefits grid (4 cards) */}
+      {/* Benefits grid (4 cards with thumbnails) */}
       <section className="mx-auto max-w-6xl px-6 py-16">
         <div className="grid gap-6 sm:grid-cols-2">
           {[ 
@@ -268,84 +252,46 @@ export default function Home() {
               title: "Stop Paying $500 and Waiting Weeks for a UGC Video That Flops.",
               body: "Get high-converting UGC ads in minutes — no creators, no shipping products, no editing. Unreal Adz turns one image and a few words into scroll-stopping videos.",
               accent: "#8B5CF6",
+              img: "/Images/ai-gen.png",
             },
             {
               title: "Get 100's of Ads — In Minutes, Not Months.",
               body: "Ditch agencies and influencers. Generate studio-quality UGC that sells — at 1/100th the cost.",
               accent: "#38BDF8",
+              img: "/Images/buzz.png",
             },
             {
               title: "Why Spend $500 on One Video When You Can Get 100 for the Same Price?",
               body: "Our AI creates endless scroll-stopping UGC variations from a single image — faster, cheaper, and smarter than any human creator.",
               accent: "#F59E0B",
+              img: "/Images/SydneyHarbour.png",
             },
             {
               title: "UGC Ads Without the Pain.",
               body: "No models. No filming. No waiting. Just upload your product photo and get hundreds of ready-to-run ads that sell.",
               accent: "#F472B6",
+              img: "/Images/ugc-image-2025-09-30T04-09-49-174Z.png",
             },
           ].map((f) => (
-            <div key={f.title} className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+            <div key={f.title} className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-5">
               {/* soft glow */}
               <div className="pointer-events-none absolute -inset-20 rounded-[48px] blur-2xl opacity-60" style={{ background: `radial-gradient(40% 40% at 20% 10%, ${f.accent}22 0%, transparent 60%)` }} />
-              <div className="relative">
-                <div className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-[#0F1117] px-2 py-1 text-sm">✨</div>
-                <h3 className="mt-3 text-lg font-semibold leading-snug">{f.title}</h3>
-                <p className="mt-2 text-sm text-white/75 leading-relaxed">{f.body}</p>
+              <div className="relative flex items-start gap-4">
+                <div className="shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black/40">
+                  <Image src={f.img} alt="" width={84} height={84} className="h-20 w-20 object-cover" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-base sm:text-lg font-semibold leading-snug">{f.title}</h3>
+                  <p className="mt-2 text-sm text-white/75 leading-relaxed">{f.body}</p>
+                </div>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* How it works (illustrated) */}
-      <section className="mx-auto max-w-6xl px-6 py-10">
-        <h2 className="text-2xl font-bold">How it works</h2>
-        <div className="mt-6 grid gap-4 sm:gap-6 md:grid-cols-4">
-          <StepCard
-            step={1}
-            title="Pick ad type"
-            accent="#8B5CF6"
-            icon={(
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M4 6h16M4 12h10M4 18h7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            )}
-          />
-          <StepCard
-            step={2}
-            title="Upload or generate persona"
-            accent="#38BDF8"
-            icon={(
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="2" />
-                <path d="M4.5 19c1.5-3.5 5-5 7.5-5s6 1.5 7.5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            )}
-          />
-          <StepCard
-            step={3}
-            title="Write 8-sec script"
-            accent="#F59E0B"
-            icon={(
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M4 17l4.5-.8L19 5.7a2 2 0 10-2.8-2.8L5.7 13.4 4 17z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-                <path d="M13 6l5 5" stroke="currentColor" strokeWidth="2" />
-              </svg>
-            )}
-          />
-          <StepCard
-            step={4}
-            title="Render with Veo 3 Fast"
-            accent="#F472B6"
-            icon={(
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M8 5v14l11-7L8 5z" fill="currentColor" />
-              </svg>
-            )}
-          />
-        </div>
-      </section>
+      {/* How it works */}
+      <HowItWorks />
 
       {/* Metrics band with sparklines */}
       <section className="mx-auto max-w-6xl px-6 py-10">
