@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Check Subscription Plans</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #1a1a1a;
+      color: #fff;
+    }
+    h1, h2 {
+      color: #fff;
+    }
+    button {
+      padding: 10px 15px;
+      background: linear-gradient(to right, #7928ca, #ff0080);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    pre {
+      background-color: #2a2a2a;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      color: #ddd;
+    }
+    .card {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .success {
+      color: #4CAF50;
+    }
+    .error {
+      color: #f44336;
+    }
+  </style>
+</head>
+<body>
+  <h1>Check Subscription Plans</h1>
+  <p>This tool checks if your subscription plans have the correct Stripe price IDs.</p>
+  
+  <div class="card">
+    <h2>Subscription Plans</h2>
+    <button onclick="checkPlans()">Check Plans</button>
+  </div>
+  
+  <h2>Results:</h2>
+  <div id="results">
+    <p>No results yet</p>
+  </div>
+  
+  <h2>Raw Response:</h2>
+  <pre id="response">No response yet</pre>
+  
+  <script>
+    async function checkPlans() {
+      document.getElementById('results').innerHTML = '<p>Checking plans...</p>';
+      document.getElementById('response').textContent = 'Checking...';
+      
+      try {
+        const response = await fetch('/api/check-plans');
+        const data = await response.json();
+        document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+        
+        let resultsHtml = '';
+        
+        // Check if the stripe_price_id column exists
+        if (data.hasStripePriceIdColumn) {
+          resultsHtml += '<p class="success">✅ stripe_price_id column exists in subscription_plans table</p>';
+        } else {
+          resultsHtml += '<p class="error">❌ stripe_price_id column does not exist in subscription_plans table</p>';
+        }
+        
+        // Check if plans were found
+        if (data.plans && data.plans.length > 0) {
+          resultsHtml += `<p class="success">✅ Found ${data.plans.length} subscription plans</p>`;
+        } else {
+          resultsHtml += '<p class="error">❌ No subscription plans found</p>';
+        }
+        
+        // Check Business plan
+        if (data.businessPlan) {
+          resultsHtml += '<p class="success">✅ Business plan found</p>';
+          if (data.isBusinessPriceCorrect) {
+            resultsHtml += '<p class="success">✅ Business plan has correct price ID</p>';
+          } else {
+            resultsHtml += `<p class="error">❌ Business plan has incorrect price ID: ${data.businessPlan.stripe_price_id}</p>`;
+          }
+        } else {
+          resultsHtml += '<p class="error">❌ Business plan not found</p>';
+        }
+        
+        // Check Lite plan
+        if (data.litePlan) {
+          resultsHtml += '<p class="success">✅ Lite plan found</p>';
+          if (data.isLitePriceCorrect) {
+            resultsHtml += '<p class="success">✅ Lite plan has correct price ID</p>';
+          } else {
+            resultsHtml += `<p class="error">❌ Lite plan has incorrect price ID: ${data.litePlan.stripe_price_id}</p>`;
+          }
+        } else {
+          resultsHtml += '<p class="error">❌ Lite plan not found</p>';
+        }
+        
+        // Check Heavy plan
+        if (data.heavyPlan) {
+          resultsHtml += '<p class="success">✅ Heavy plan found</p>';
+          if (data.isHeavyPriceCorrect) {
+            resultsHtml += '<p class="success">✅ Heavy plan has correct price ID</p>';
+          } else {
+            resultsHtml += `<p class="error">❌ Heavy plan has incorrect price ID: ${data.heavyPlan.stripe_price_id}</p>`;
+          }
+        } else {
+          resultsHtml += '<p class="error">❌ Heavy plan not found</p>';
+        }
+        
+        document.getElementById('results').innerHTML = resultsHtml;
+      } catch (error) {
+        document.getElementById('results').innerHTML = `<p class="error">Error: ${error.message}</p>`;
+        document.getElementById('response').textContent = `Error: ${error.message}`;
+      }
+    }
+  </script>
+</body>
+</html>

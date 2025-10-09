@@ -157,22 +157,25 @@ export async function getUserSubscription(userId: string) {
  * Get the current user's credit balance
  */
 export async function getUserCredits(userId: string) {
-  const supabase = createSupabaseBrowserClient();
-  
   try {
-    const { data, error } = await supabase
-      .from('user_credits')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle(); // Use maybeSingle instead of single to handle no rows
-      
-    if (error) {
-      // This is a real error, not just no rows
-      throw error;
+    console.log('Fetching user credits from API for user:', userId);
+    
+    // Use the API endpoint instead of direct Supabase query
+    const response = await fetch(`/api/subscription/check-credits?userId=${encodeURIComponent(userId)}`);
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch credits');
     }
     
-    // If no credits found, return null instead of throwing an error
-    return { success: true, credits: data || null };
+    const data = await response.json();
+    console.log('Credits API response:', data);
+    
+    return { 
+      success: data.success, 
+      credits: data.credits || null,
+      error: data.error
+    };
   } catch (error) {
     console.error('Error getting user credits:', error);
     return { success: false, error };
@@ -314,44 +317,30 @@ export async function changeSubscriptionPlan(userId: string, planId: string) {
  * Cancel the user's subscription
  */
 export async function cancelSubscription(userId: string, cancelImmediately = false) {
-  const supabase = createSupabaseBrowserClient();
-  
   try {
-    // Get the current subscription
-    const { data: subscription, error: subError } = await supabase
-      .from('user_subscriptions')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('status', 'active')
-      .single();
-      
-    if (subError) throw subError;
+    console.log(`Calling direct cancel subscription API for user ${userId}`);
     
-    if (cancelImmediately) {
-      // Cancel immediately
-      const { error: updateError } = await supabase
-        .from('user_subscriptions')
-        .update({
-          status: 'canceled',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', subscription.id);
-        
-      if (updateError) throw updateError;
-    } else {
-      // Cancel at period end
-      const { error: updateError } = await supabase
-        .from('user_subscriptions')
-        .update({
-          cancel_at_period_end: true,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', subscription.id);
-        
-      if (updateError) throw updateError;
+    // Call the direct API endpoint to cancel the subscription
+    const response = await fetch('/api/subscription/cancel-direct', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId
+      }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Error response from cancel API:', errorData);
+      throw new Error(errorData.error || 'Failed to cancel subscription');
     }
     
-    return { success: true };
+    const result = await response.json();
+    console.log('Cancel subscription API result:', result);
+    
+    return result;
   } catch (error) {
     console.error('Error canceling subscription:', error);
     return { success: false, error };

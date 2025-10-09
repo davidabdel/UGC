@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Webhook Fix</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #1a1a1a;
+      color: #fff;
+    }
+    h1, h2 {
+      color: #fff;
+    }
+    button {
+      padding: 10px 15px;
+      background: linear-gradient(to right, #7928ca, #ff0080);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    pre {
+      background-color: #2a2a2a;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      color: #ddd;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .card {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .success {
+      color: #4CAF50;
+    }
+    .error {
+      color: #f44336;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input, select, textarea {
+      padding: 10px;
+      margin: 5px 0;
+      width: 100%;
+      background-color: #2a2a2a;
+      border: 1px solid #444;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <h1>Test Webhook Fix</h1>
+  <p>This tool helps diagnose and fix issues with the Stripe webhook integration.</p>
+  
+  <div class="card">
+    <h2>1. Check Database</h2>
+    <p>First, let's check if the subscription exists in the database.</p>
+    
+    <div class="form-group">
+      <label for="user-id">User ID:</label>
+      <input type="text" id="user-id" value="b3c5a3d1-2f0d-4941-83c8-ed0c7cf70d33">
+    </div>
+    
+    <button onclick="checkSubscription()">Check Subscription</button>
+    
+    <div id="subscription-result" style="margin-top: 15px;"></div>
+  </div>
+  
+  <div class="card">
+    <h2>2. Fix Heavy Plan Price ID</h2>
+    <p>The webhook shows you're using the Heavy plan with price_id: price_1SELvjKIeF7PCY4Jbf4vtqC2</p>
+    <p>Let's make sure this price ID is correctly mapped in the database.</p>
+    
+    <div class="form-group">
+      <label for="price-id">Price ID:</label>
+      <input type="text" id="price-id" value="price_1SELvjKIeF7PCY4Jbf4vtqC2">
+    </div>
+    
+    <button onclick="checkPriceId()">Check Price ID Mapping</button>
+    
+    <div id="price-result" style="margin-top: 15px;"></div>
+  </div>
+  
+  <div class="card">
+    <h2>3. Manual Subscription Update</h2>
+    <p>If the webhook isn't working, we can manually update the subscription.</p>
+    
+    <div class="form-group">
+      <label for="manual-user-id">User ID:</label>
+      <input type="text" id="manual-user-id" value="b3c5a3d1-2f0d-4941-83c8-ed0c7cf70d33">
+    </div>
+    
+    <div class="form-group">
+      <label for="manual-stripe-id">Stripe Subscription ID:</label>
+      <input type="text" id="manual-stripe-id" value="sub_1SFrAdKIeF7PCY4JmOtS9MFU">
+    </div>
+    
+    <div class="form-group">
+      <label for="manual-plan-id">Plan ID:</label>
+      <select id="manual-plan-id">
+        <option value="">Loading plans...</option>
+      </select>
+    </div>
+    
+    <button onclick="manualUpdate()">Update Subscription Manually</button>
+    
+    <div id="manual-result" style="margin-top: 15px;"></div>
+  </div>
+  
+  <div class="card">
+    <h2>4. Fix Database Schema</h2>
+    <p>If needed, we can fix the database schema to ensure proper mapping.</p>
+    
+    <button onclick="fixSchema()">Fix Database Schema</button>
+    
+    <div id="schema-result" style="margin-top: 15px;"></div>
+  </div>
+  
+  <script>
+    // Load plans when the page loads
+    window.addEventListener('DOMContentLoaded', loadPlans);
+    
+    async function loadPlans() {
+      try {
+        const response = await fetch('/api/debug-database?table=subscription_plans');
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+          const planSelect = document.getElementById('manual-plan-id');
+          planSelect.innerHTML = '';
+          
+          data.data.forEach(plan => {
+            const option = document.createElement('option');
+            option.value = plan.id;
+            option.textContent = `${plan.name} - $${(plan.price_monthly / 100).toFixed(2)} - ${plan.credits_per_month} credits`;
+            
+            // Add price ID as data attribute
+            option.dataset.priceId = plan.stripe_price_id || 'none';
+            
+            planSelect.appendChild(option);
+          });
+        } else {
+          document.getElementById('manual-plan-id').innerHTML = '<option value="">Error loading plans</option>';
+        }
+      } catch (error) {
+        document.getElementById('manual-plan-id').innerHTML = '<option value="">Error loading plans</option>';
+      }
+    }
+    
+    async function checkSubscription() {
+      const userId = document.getElementById('user-id').value;
+      const resultDiv = document.getElementById('subscription-result');
+      
+      resultDiv.innerHTML = '<p>Checking subscription...</p>';
+      
+      try {
+        const response = await fetch(`/api/debug-database?table=user_subscriptions&userId=${encodeURIComponent(userId)}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          if (data.data && data.data.length > 0) {
+            const sub = data.data[0];
+            resultDiv.innerHTML = `
+              <p class="success">✅ Subscription found!</p>
+              <p><strong>Plan ID:</strong> ${sub.plan_id}</p>
+              <p><strong>Status:</strong> ${sub.status}</p>
+              <p><strong>Stripe ID:</strong> ${sub.payment_provider_subscription_id || 'None'}</p>
+              <p><strong>Created:</strong> ${new Date(sub.created_at).toLocaleString()}</p>
+              <pre>${JSON.stringify(sub, null, 2)}</pre>
+            `;
+          } else {
+            resultDiv.innerHTML = `
+              <p class="error">❌ No subscription found for this user.</p>
+              <p>This suggests the webhook is not creating the subscription record.</p>
+            `;
+          }
+        } else {
+          resultDiv.innerHTML = `<p class="error">❌ Error: ${data.error || 'Unknown error'}</p>`;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+      }
+    }
+    
+    async function checkPriceId() {
+      const priceId = document.getElementById('price-id').value;
+      const resultDiv = document.getElementById('price-result');
+      
+      resultDiv.innerHTML = '<p>Checking price ID mapping...</p>';
+      
+      try {
+        const response = await fetch(`/api/debug-database?table=subscription_plans`);
+        const data = await response.json();
+        
+        if (data.success) {
+          const matchingPlans = data.data.filter(plan => 
+            plan.stripe_price_id === priceId || 
+            plan.stripe_price_id_yearly === priceId
+          );
+          
+          if (matchingPlans.length > 0) {
+            let html = `<p class="success">✅ Price ID found in ${matchingPlans.length} plans:</p><ul>`;
+            
+            matchingPlans.forEach(plan => {
+              html += `<li><strong>${plan.name}</strong> (ID: ${plan.id})<br>`;
+              html += `Monthly Price: $${(plan.price_monthly / 100).toFixed(2)}<br>`;
+              html += `Yearly Price: $${(plan.price_yearly / 100).toFixed(2)}<br>`;
+              html += `Credits: ${plan.credits_per_month}<br>`;
+              html += `Monthly Price ID: ${plan.stripe_price_id || 'None'}<br>`;
+              html += `Yearly Price ID: ${plan.stripe_price_id_yearly || 'None'}</li>`;
+            });
+            
+            html += '</ul>';
+            resultDiv.innerHTML = html;
+          } else {
+            resultDiv.innerHTML = `
+              <p class="error">❌ No plans found with this price ID.</p>
+              <p>This is likely why the webhook can't update the subscription.</p>
+              <p><strong>Solution:</strong> Use the "Fix Database Schema" button below to add this price ID to the correct plan.</p>
+            `;
+          }
+        } else {
+          resultDiv.innerHTML = `<p class="error">❌ Error: ${data.error || 'Unknown error'}</p>`;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+      }
+    }
+    
+    async function manualUpdate() {
+      const userId = document.getElementById('manual-user-id').value;
+      const stripeId = document.getElementById('manual-stripe-id').value;
+      const planId = document.getElementById('manual-plan-id').value;
+      const resultDiv = document.getElementById('manual-result');
+      
+      if (!userId || !planId || !stripeId) {
+        resultDiv.innerHTML = '<p class="error">❌ Please fill in all fields</p>';
+        return;
+      }
+      
+      resultDiv.innerHTML = '<p>Updating subscription...</p>';
+      
+      try {
+        const response = await fetch('/api/debug-subscription-update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId,
+            planId,
+            status: 'active',
+            stripeSubscriptionId: stripeId
+          }),
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          resultDiv.innerHTML = `
+            <p class="success">✅ Subscription updated successfully!</p>
+            <p>The subscription has been manually updated in the database.</p>
+            <p><strong>Next Step:</strong> Refresh your subscription page to see if it's working now.</p>
+            <pre>${JSON.stringify(data.subscription, null, 2)}</pre>
+          `;
+        } else {
+          resultDiv.innerHTML = `<p class="error">❌ Error: ${data.error || 'Unknown error'}</p>`;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+      }
+    }
+    
+    async function fixSchema() {
+      const resultDiv = document.getElementById('schema-result');
+      resultDiv.innerHTML = '<p>Fixing database schema...</p>';
+      
+      try {
+        // First, check if we need to fix the Heavy plan
+        const priceId = document.getElementById('price-id').value || 'price_1SELvjKIeF7PCY4Jbf4vtqC2';
+        
+        const sql = `
+-- Fix the Heavy plan price ID mapping
+UPDATE subscription_plans
+SET stripe_price_id = '${priceId}'
+WHERE name = 'Heavy' OR name = 'Heavy Yearly';
+
+-- Make sure all yearly plans have correct price_monthly
+UPDATE subscription_plans
+SET price_monthly = price_yearly
+WHERE name LIKE '% Yearly';
+
+-- View the updated plans
+SELECT id, name, price_monthly, price_yearly, credits_per_month, stripe_price_id, stripe_price_id_yearly
+FROM subscription_plans
+WHERE is_active = true
+ORDER BY price_monthly;
+        `;
+        
+        const response = await fetch('/api/run-sql', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ sql }),
+        });
+        
+        const data = await response.json();
+        
+        if (data.success || (data.individualResults && data.individualResults.some(r => r.success))) {
+          resultDiv.innerHTML = `
+            <p class="success">✅ Database schema fixed!</p>
+            <p>The price ID mapping has been updated.</p>
+            <p><strong>Next Step:</strong> Try the webhook again or use the manual update above.</p>
+            <pre>${JSON.stringify(data.data || data.individualResults || data, null, 2)}</pre>
+          `;
+        } else {
+          resultDiv.innerHTML = `
+            <p class="error">❌ Error fixing schema: ${data.error || 'Unknown error'}</p>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          `;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+      }
+    }
+  </script>
+</body>
+</html>

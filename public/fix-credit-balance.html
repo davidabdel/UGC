@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fix Credit Balance</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #1a1a1a;
+      color: #fff;
+    }
+    h1, h2 {
+      color: #fff;
+    }
+    button {
+      padding: 10px 15px;
+      background: linear-gradient(to right, #7928ca, #ff0080);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    input, select {
+      padding: 10px;
+      margin: 5px 0;
+      width: 100%;
+      background-color: #2a2a2a;
+      border: 1px solid #444;
+      color: #fff;
+    }
+    pre {
+      background-color: #2a2a2a;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      color: #ddd;
+    }
+    .card {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .success {
+      color: #4CAF50;
+    }
+    .error {
+      color: #f44336;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Fix Credit Balance</h1>
+  <p>This tool checks and fixes your credit balance.</p>
+  
+  <div class="card">
+    <h2>User Information</h2>
+    
+    <div class="form-group">
+      <label for="userId">User ID:</label>
+      <input type="text" id="userId" placeholder="Enter User ID" value="b3c5a3d1-2f0d-4941-83c8-ed0c7cf70d33">
+    </div>
+    
+    <button onclick="checkCredits()">Check Credits</button>
+  </div>
+  
+  <div id="result" class="card" style="display: none;">
+    <h2>Credit Information</h2>
+    <div id="result-content"></div>
+  </div>
+  
+  <div id="fix-section" class="card" style="display: none;">
+    <h2>Fix Credits</h2>
+    <div class="form-group">
+      <label for="creditAmount">Credit Amount:</label>
+      <input type="number" id="creditAmount" placeholder="Enter credit amount">
+    </div>
+    <button onclick="fixCredits()">Update Credits</button>
+  </div>
+  
+  <h2>Raw Response:</h2>
+  <pre id="response">No response yet</pre>
+  
+  <script>
+    async function checkCredits() {
+      const userId = document.getElementById('userId').value;
+      
+      if (!userId) {
+        document.getElementById('result').style.display = 'block';
+        document.getElementById('result-content').innerHTML = '<p class="error">Please enter a user ID</p>';
+        return;
+      }
+      
+      document.getElementById('result').style.display = 'block';
+      document.getElementById('result-content').innerHTML = '<p>Checking credits...</p>';
+      document.getElementById('response').textContent = 'Checking...';
+      
+      try {
+        const response = await fetch('/api/check-user-credits', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId }),
+        });
+        
+        const data = await response.json();
+        document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+        
+        if (data.success) {
+          let html = '';
+          
+          if (data.credits) {
+            html += `<p><strong>Credit Balance:</strong> ${data.credits.balance}</p>`;
+            html += `<p><strong>Last Refill:</strong> ${new Date(data.credits.last_refill_date).toLocaleString()}</p>`;
+            
+            // Show fix section
+            document.getElementById('fix-section').style.display = 'block';
+            document.getElementById('creditAmount').value = data.credits.balance;
+          } else {
+            html += '<p class="error">No credit record found</p>';
+            
+            // Show fix section with default value
+            document.getElementById('fix-section').style.display = 'block';
+            
+            // Find credits from subscription
+            let defaultCredits = 0;
+            if (data.subscriptions && data.subscriptions.length > 0) {
+              const activeSub = data.subscriptions.find(sub => sub.status === 'active');
+              if (activeSub && activeSub.subscription_plans) {
+                defaultCredits = activeSub.subscription_plans.credits_per_month;
+              }
+            }
+            
+            document.getElementById('creditAmount').value = defaultCredits || 50000; // Default to 50000 if no subscription
+          }
+          
+          // Show transactions
+          if (data.transactions && data.transactions.length > 0) {
+            html += '<h3>Recent Transactions</h3>';
+            html += '<ul>';
+            
+            data.transactions.forEach(tx => {
+              const date = new Date(tx.created_at).toLocaleString();
+              const amountClass = tx.amount > 0 ? 'success' : 'error';
+              
+              html += `<li>${date}: <span class="${amountClass}">${tx.amount > 0 ? '+' : ''}${tx.amount}</span> - ${tx.description}</li>`;
+            });
+            
+            html += '</ul>';
+          }
+          
+          // Show subscriptions
+          if (data.subscriptions && data.subscriptions.length > 0) {
+            html += '<h3>Active Subscriptions</h3>';
+            html += '<ul>';
+            
+            data.subscriptions.forEach(sub => {
+              const planName = sub.subscription_plans ? sub.subscription_plans.name : 'Unknown';
+              const planCredits = sub.subscription_plans ? sub.subscription_plans.credits_per_month : 'Unknown';
+              
+              html += `<li>${planName} Plan: ${planCredits} credits per month</li>`;
+            });
+            
+            html += '</ul>';
+          }
+          
+          document.getElementById('result-content').innerHTML = html;
+        } else {
+          document.getElementById('result-content').innerHTML = `<p class="error">Error: ${data.error || 'Unknown error'}</p>`;
+        }
+      } catch (error) {
+        document.getElementById('result-content').innerHTML = `<p class="error">Error: ${error.message}</p>`;
+        document.getElementById('response').textContent = `Error: ${error.message}`;
+      }
+    }
+    
+    async function fixCredits() {
+      const userId = document.getElementById('userId').value;
+      const creditAmount = parseInt(document.getElementById('creditAmount').value);
+      
+      if (!userId || isNaN(creditAmount)) {
+        alert('Please enter a valid user ID and credit amount');
+        return;
+      }
+      
+      document.getElementById('result-content').innerHTML += '<p>Updating credits...</p>';
+      
+      try {
+        const response = await fetch('/api/update-user-credits', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId, balance: creditAmount }),
+        });
+        
+        const data = await response.json();
+        document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+        
+        if (data.success) {
+          document.getElementById('result-content').innerHTML += `
+            <p class="success">✅ Credits updated successfully</p>
+            <p><strong>New Balance:</strong> ${data.credits.balance}</p>
+            <p><strong>Next Step:</strong> Refresh your subscription page to see the changes</p>
+          `;
+        } else {
+          document.getElementById('result-content').innerHTML += `<p class="error">❌ Error: ${data.error || 'Unknown error'}</p>`;
+        }
+      } catch (error) {
+        document.getElementById('result-content').innerHTML += `<p class="error">❌ Error: ${error.message}</p>`;
+      }
+    }
+  </script>
+</body>
+</html>

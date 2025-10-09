@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Webhook Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #1a1a1a;
+      color: #fff;
+    }
+    h1, h2 {
+      color: #fff;
+    }
+    button {
+      padding: 10px 15px;
+      background: linear-gradient(to right, #7928ca, #ff0080);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    button.small {
+      padding: 5px 10px;
+      font-size: 0.8em;
+      margin-right: 5px;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    textarea {
+      width: 100%;
+      height: 300px;
+      background-color: #2a2a2a;
+      color: #ddd;
+      border: 1px solid #444;
+      padding: 10px;
+      font-family: monospace;
+      margin-bottom: 10px;
+    }
+    pre {
+      background-color: #2a2a2a;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      color: #ddd;
+    }
+    .card {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      background-color: #2a2a2a;
+      color: #ddd;
+      border: 1px solid #444;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Webhook Test Tool</h1>
+  <p>This tool lets you test the webhook endpoint directly without going through Stripe.</p>
+  
+  <div class="card">
+    <h2>Test Webhook</h2>
+    <p>Enter your webhook secret (optional):</p>
+    <input type="text" id="webhookSecret" placeholder="whsec_...">
+    
+    <p>Enter the webhook payload (JSON):</p>
+    <textarea id="payload">
+{
+  "id": "evt_test_webhook",
+  "object": "event",
+  "api_version": "2023-10-16",
+  "created": 1759823770,
+  "data": {
+    "object": {
+      "id": "sub_test_webhook",
+      "object": "subscription",
+      "customer": "cus_test_webhook",
+      "status": "active",
+      "current_period_start": 1759823770,
+      "current_period_end": 1762502170,
+      "cancel_at_period_end": false,
+      "items": {
+        "data": [
+          {
+            "price": {
+              "id": "price_1SELvjKIeF7PCY4Jbf4vtqC2"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "type": "customer.subscription.created"
+}
+    </textarea>
+    
+    <p>Preset Events:</p>
+    <button onclick="loadEvent('checkout')" class="small">Checkout Session</button>
+    <button onclick="loadEvent('subscription')" class="small">Subscription Created</button>
+    <button onclick="loadEvent('invoice')" class="small">Invoice Paid</button>
+    
+    <button onclick="testWebhook()">Test Webhook</button>
+  </div>
+  
+  <h2>Response:</h2>
+  <pre id="response">No response yet</pre>
+  
+  <script>
+    function loadEvent(type) {
+      let eventJson = {};
+      
+      if (type === 'checkout') {
+        eventJson = {
+          "id": "evt_test_checkout",
+          "object": "event",
+          "api_version": "2023-10-16",
+          "created": 1759823770,
+          "data": {
+            "object": {
+              "id": "cs_test_webhook",
+              "object": "checkout.session",
+              "customer": "cus_test_webhook",
+              "customer_details": {
+                "email": "david@uconnect.com.au"
+              },
+              "mode": "subscription",
+              "subscription": "sub_test_webhook",
+              "payment_status": "paid"
+            }
+          },
+          "type": "checkout.session.completed"
+        };
+      } else if (type === 'subscription') {
+        eventJson = {
+          "id": "evt_test_subscription",
+          "object": "event",
+          "api_version": "2023-10-16",
+          "created": 1759823770,
+          "data": {
+            "object": {
+              "id": "sub_test_webhook",
+              "object": "subscription",
+              "customer": "cus_test_webhook",
+              "status": "active",
+              "current_period_start": 1759823770,
+              "current_period_end": 1762502170,
+              "cancel_at_period_end": false,
+              "items": {
+                "data": [
+                  {
+                    "price": {
+                      "id": "price_1SELvjKIeF7PCY4Jbf4vtqC2"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "type": "customer.subscription.created"
+        };
+      } else if (type === 'invoice') {
+        eventJson = {
+          "id": "evt_test_invoice",
+          "object": "event",
+          "api_version": "2023-10-16",
+          "created": 1759823770,
+          "data": {
+            "object": {
+              "id": "in_test_webhook",
+              "object": "invoice",
+              "customer": "cus_test_webhook",
+              "customer_email": "david@uconnect.com.au",
+              "subscription": "sub_test_webhook",
+              "status": "paid",
+              "billing_reason": "subscription_create"
+            }
+          },
+          "type": "invoice.paid"
+        };
+      }
+      
+      document.getElementById('payload').value = JSON.stringify(eventJson, null, 2);
+    }
+    
+    async function testWebhook() {
+      const webhookSecret = document.getElementById('webhookSecret').value;
+      const payload = document.getElementById('payload').value;
+      
+      document.getElementById('response').textContent = 'Sending webhook...';
+      
+      try {
+        // Create a timestamp and a random string
+        const timestamp = Math.floor(Date.now() / 1000);
+        const randomBytes = new Uint8Array(24);
+        window.crypto.getRandomValues(randomBytes);
+        const randomString = Array.from(randomBytes)
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('');
+        
+        // Create a fake signature (this won't actually verify, but it's for testing)
+        const fakeSignature = `t=${timestamp},v1=${randomString}`;
+        
+        const headers = {
+          'Content-Type': 'application/json'
+        };
+        
+        if (webhookSecret) {
+          headers['stripe-signature'] = fakeSignature;
+        }
+        
+        const response = await fetch('/api/stripe/webhook', {
+          method: 'POST',
+          headers: headers,
+          body: payload
+        });
+        
+        const responseText = await response.text();
+        let responseData;
+        try {
+          responseData = JSON.parse(responseText);
+        } catch (e) {
+          responseData = responseText;
+        }
+        
+        document.getElementById('response').textContent = JSON.stringify(responseData, null, 2);
+      } catch (error) {
+        document.getElementById('response').textContent = `Error: ${error.message}`;
+      }
+    }
+  </script>
+</body>
+</html>

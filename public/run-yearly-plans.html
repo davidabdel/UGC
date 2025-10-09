@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Yearly Plans</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #1a1a1a;
+      color: #fff;
+    }
+    h1, h2 {
+      color: #fff;
+    }
+    button {
+      padding: 10px 15px;
+      background: linear-gradient(to right, #7928ca, #ff0080);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    pre {
+      background-color: #2a2a2a;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      color: #ddd;
+    }
+    .card {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .success {
+      color: #4CAF50;
+    }
+    .error {
+      color: #f44336;
+    }
+  </style>
+</head>
+<body>
+  <h1>Add Yearly Plans</h1>
+  <p>This tool adds separate yearly plans to the subscription_plans table.</p>
+  
+  <div class="card">
+    <h2>SQL Script</h2>
+    <pre id="sql-script">
+-- This script adds separate yearly plans to the subscription_plans table
+
+-- First, let's check if we already have yearly plans
+DO $$
+DECLARE
+  yearly_count INTEGER;
+BEGIN
+  SELECT COUNT(*) INTO yearly_count FROM subscription_plans WHERE name LIKE '% Yearly';
+  
+  -- Only add yearly plans if they don't exist
+  IF yearly_count = 0 THEN
+    -- Insert yearly version of each plan (except Free)
+    INSERT INTO subscription_plans (
+      name, 
+      description,
+      price_monthly,
+      price_yearly,
+      credits_per_month,
+      features,
+      is_active,
+      stripe_price_id,
+      stripe_price_id_yearly
+    )
+    SELECT 
+      name || ' Yearly', 
+      description || ' (Annual billing)',
+      price_monthly,
+      price_yearly,
+      credits_per_month,
+      features,
+      is_active,
+      NULL, -- No monthly price ID for yearly plans
+      stripe_price_id_yearly -- Use the yearly price ID as the primary price ID
+    FROM subscription_plans
+    WHERE name != 'Free' AND stripe_price_id_yearly IS NOT NULL;
+    
+    -- Update the original plans to have NULL stripe_price_id_yearly
+    -- This ensures each plan only has one price ID
+    UPDATE subscription_plans
+    SET stripe_price_id_yearly = NULL
+    WHERE name NOT LIKE '% Yearly';
+    
+    RAISE NOTICE 'Yearly plans added successfully';
+  ELSE
+    RAISE NOTICE 'Yearly plans already exist, skipping';
+  END IF;
+END $$;
+
+-- View the updated plans
+SELECT id, name, price_monthly, price_yearly, credits_per_month, stripe_price_id, stripe_price_id_yearly
+FROM subscription_plans
+WHERE is_active = true
+ORDER BY price_monthly;
+    </pre>
+    
+    <button id="run-button" onclick="runScript()">Run SQL Script</button>
+  </div>
+  
+  <div id="result" class="card" style="display: none;">
+    <h2>Result</h2>
+    <div id="result-content"></div>
+  </div>
+  
+  <script>
+    async function runScript() {
+      document.getElementById('run-button').disabled = true;
+      document.getElementById('run-button').textContent = 'Running...';
+      document.getElementById('result').style.display = 'block';
+      document.getElementById('result-content').innerHTML = '<p>Running SQL script...</p>';
+      
+      try {
+        const response = await fetch('/api/run-sql', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sql: document.getElementById('sql-script').textContent
+          }),
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          document.getElementById('result-content').innerHTML = `
+            <p class="success">✅ SQL script executed successfully</p>
+            <h3>Results:</h3>
+            <pre>${JSON.stringify(data.results, null, 2)}</pre>
+          `;
+        } else {
+          document.getElementById('result-content').innerHTML = `
+            <p class="error">❌ Error: ${data.error}</p>
+          `;
+        }
+      } catch (error) {
+        document.getElementById('result-content').innerHTML = `
+          <p class="error">❌ Error: ${error.message}</p>
+        `;
+      } finally {
+        document.getElementById('run-button').disabled = false;
+        document.getElementById('run-button').textContent = 'Run SQL Script';
+      }
+    }
+  </script>
+</body>
+</html>

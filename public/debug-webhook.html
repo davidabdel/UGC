@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Webhook Debug Tool</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #1a1a1a;
+      color: #fff;
+    }
+    h1, h2, h3 {
+      color: #fff;
+    }
+    button {
+      padding: 10px 15px;
+      background: linear-gradient(to right, #7928ca, #ff0080);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    input, select, textarea {
+      padding: 10px;
+      margin: 5px 0;
+      width: 100%;
+      background-color: #2a2a2a;
+      border: 1px solid #444;
+      color: #fff;
+    }
+    pre {
+      background-color: #2a2a2a;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      color: #ddd;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .card {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .success {
+      color: #4CAF50;
+    }
+    .error {
+      color: #f44336;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      color: #ddd;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #444;
+    }
+    th {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    .tabs {
+      display: flex;
+      margin-bottom: 20px;
+    }
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      background-color: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      margin-right: 5px;
+    }
+    .tab.active {
+      background-color: rgba(255, 255, 255, 0.2);
+      border-bottom: 2px solid #7928ca;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <h1>Webhook Debug Tool</h1>
+  <p>This tool helps diagnose issues with Stripe webhooks and database integration.</p>
+  
+  <div class="tabs">
+    <div class="tab active" data-tab="database">Database Viewer</div>
+    <div class="tab" data-tab="webhook">Webhook Tester</div>
+    <div class="tab" data-tab="subscription">Subscription Updater</div>
+  </div>
+  
+  <div id="database-tab" class="tab-content active">
+    <div class="card">
+      <h2>Database Viewer</h2>
+      <div class="form-group">
+        <label for="table-select">Select Table:</label>
+        <select id="table-select">
+          <option value="subscription_plans">subscription_plans</option>
+          <option value="user_subscriptions">user_subscriptions</option>
+          <option value="user_credits">user_credits</option>
+          <option value="credit_transactions">credit_transactions</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="user-id">User ID (optional):</label>
+        <input type="text" id="user-id" placeholder="Enter User ID" value="b3c5a3d1-2f0d-4941-83c8-ed0c7cf70d33">
+      </div>
+      
+      <button onclick="queryDatabase()">Query Database</button>
+      
+      <div id="database-results" style="margin-top: 20px;"></div>
+    </div>
+  </div>
+  
+  <div id="webhook-tab" class="tab-content">
+    <div class="card">
+      <h2>Webhook Tester</h2>
+      <p>Send a test webhook event to the webhook endpoint.</p>
+      
+      <div class="form-group">
+        <label for="event-type">Event Type:</label>
+        <select id="event-type">
+          <option value="checkout.session.completed">checkout.session.completed</option>
+          <option value="customer.subscription.created">customer.subscription.created</option>
+          <option value="customer.subscription.updated">customer.subscription.updated</option>
+          <option value="invoice.paid">invoice.paid</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="price-id">Price ID:</label>
+        <select id="price-id">
+          <option value="price_1SELqMKIeF7PCY4JjPiAhvmx">Lite Monthly (price_1SELqMKIeF7PCY4JjPiAhvmx)</option>
+          <option value="price_1SELtRKIeF7PCY4Jti48TBYA">Lite Yearly (price_1SELtRKIeF7PCY4Jti48TBYA)</option>
+          <option value="price_1SELv9KIeF7PCY4J8o8mvjHB">Business Monthly (price_1SELv9KIeF7PCY4J8o8mvjHB)</option>
+          <option value="price_1SELvjKIeF7PCY4Jbf4vtqC2">Heavy Monthly (price_1SELvjKIeF7PCY4Jbf4vtqC2)</option>
+          <option value="price_1SELvjKIeF7PCY4JYvgmLtXB">Heavy Yearly (price_1SELvjKIeF7PCY4JYvgmLtXB)</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="customer-email">Customer Email:</label>
+        <input type="email" id="customer-email" value="david@uconnect.com.au">
+      </div>
+      
+      <div class="form-group">
+        <label for="subscription-id">Subscription ID:</label>
+        <input type="text" id="subscription-id" value="sub_test_webhook_123">
+      </div>
+      
+      <div class="form-group">
+        <label for="webhook-endpoint">Webhook Endpoint:</label>
+        <select id="webhook-endpoint">
+          <option value="/api/stripe/webhook">Real Webhook (/api/stripe/webhook)</option>
+          <option value="/api/stripe/test-webhook">Test Webhook (/api/stripe/test-webhook)</option>
+        </select>
+      </div>
+      
+      <button onclick="sendWebhook()">Send Webhook</button>
+      
+      <div id="webhook-results" style="margin-top: 20px;"></div>
+    </div>
+  </div>
+  
+  <div id="subscription-tab" class="tab-content">
+    <div class="card">
+      <h2>Subscription Updater</h2>
+      <p>Directly update a subscription in the database.</p>
+      
+      <div class="form-group">
+        <label for="sub-user-id">User ID:</label>
+        <input type="text" id="sub-user-id" value="b3c5a3d1-2f0d-4941-83c8-ed0c7cf70d33">
+      </div>
+      
+      <div class="form-group">
+        <label for="sub-plan-id">Plan ID:</label>
+        <select id="sub-plan-id">
+          <option value="">Loading plans...</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="sub-status">Status:</label>
+        <select id="sub-status">
+          <option value="active">active</option>
+          <option value="canceled">canceled</option>
+          <option value="past_due">past_due</option>
+          <option value="incomplete">incomplete</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="sub-id">Subscription ID (leave empty for new):</label>
+        <input type="text" id="sub-id" placeholder="Leave empty for new subscription">
+      </div>
+      
+      <div class="form-group">
+        <label for="sub-stripe-id">Stripe Subscription ID:</label>
+        <input type="text" id="sub-stripe-id" value="sub_manual_debug_123">
+      </div>
+      
+      <button onclick="updateSubscription()">Update Subscription</button>
+      
+      <div id="subscription-results" style="margin-top: 20px;"></div>
+    </div>
+  </div>
+  
+  <h2>Raw Response:</h2>
+  <pre id="response">No response yet</pre>
+  
+  <script>
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Remove active class from all tabs
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        // Add active class to clicked tab
+        tab.classList.add('active');
+        document.getElementById(`${tab.dataset.tab}-tab`).classList.add('active');
+      });
+    });
+    
+    // Load plans when the page loads
+    window.addEventListener('DOMContentLoaded', loadPlans);
+    
+    async function loadPlans() {
+      try {
+        const response = await fetch('/api/debug-database?table=subscription_plans');
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+          const planSelect = document.getElementById('sub-plan-id');
+          planSelect.innerHTML = '';
+          
+          data.data.forEach(plan => {
+            const option = document.createElement('option');
+            option.value = plan.id;
+            option.textContent = `${plan.name} - $${(plan.price_monthly / 100).toFixed(2)}/month - ${plan.credits_per_month} credits`;
+            planSelect.appendChild(option);
+          });
+        } else {
+          document.getElementById('sub-plan-id').innerHTML = '<option value="">Error loading plans</option>';
+        }
+      } catch (error) {
+        document.getElementById('sub-plan-id').innerHTML = '<option value="">Error loading plans</option>';
+      }
+    }
+    
+    async function queryDatabase() {
+      const table = document.getElementById('table-select').value;
+      const userId = document.getElementById('user-id').value;
+      
+      document.getElementById('database-results').innerHTML = '<p>Loading...</p>';
+      document.getElementById('response').textContent = 'Loading...';
+      
+      try {
+        let url = `/api/debug-database?table=${encodeURIComponent(table)}`;
+        if (userId) {
+          url += `&userId=${encodeURIComponent(userId)}`;
+        }
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+        
+        if (data.success) {
+          let html = `<h3>${data.count} rows found in ${table}</h3>`;
+          
+          if (data.data && data.data.length > 0) {
+            html += '<table>';
+            
+            // Create header row
+            html += '<tr>';
+            for (const key of Object.keys(data.data[0])) {
+              if (key !== 'plan') { // Skip the plan object in the header
+                html += `<th>${key}</th>`;
+              }
+            }
+            html += '</tr>';
+            
+            // Create data rows
+            data.data.forEach(row => {
+              html += '<tr>';
+              for (const [key, value] of Object.entries(row)) {
+                if (key !== 'plan') { // Skip the plan object in the row
+                  if (key === 'plan_id' && row.plan) {
+                    // Show plan name if available
+                    html += `<td>${value} (${row.plan.name})</td>`;
+                  } else if (typeof value === 'object' && value !== null) {
+                    html += `<td>${JSON.stringify(value)}</td>`;
+                  } else {
+                    html += `<td>${value}</td>`;
+                  }
+                }
+              }
+              html += '</tr>';
+            });
+            
+            html += '</table>';
+          } else {
+            html += '<p>No data found</p>';
+          }
+          
+          document.getElementById('database-results').innerHTML = html;
+        } else {
+          document.getElementById('database-results').innerHTML = `<p class="error">Error: ${data.error || 'Unknown error'}</p>`;
+        }
+      } catch (error) {
+        document.getElementById('database-results').innerHTML = `<p class="error">Error: ${error.message}</p>`;
+        document.getElementById('response').textContent = `Error: ${error.message}`;
+      }
+    }
+    
+    async function sendWebhook() {
+      const eventType = document.getElementById('event-type').value;
+      const priceId = document.getElementById('price-id').value;
+      const customerEmail = document.getElementById('customer-email').value;
+      const subscriptionId = document.getElementById('subscription-id').value;
+      const endpoint = document.getElementById('webhook-endpoint').value;
+      
+      document.getElementById('webhook-results').innerHTML = '<p>Sending webhook...</p>';
+      document.getElementById('response').textContent = 'Sending...';
+      
+      try {
+        // Create a webhook event based on the selected type
+        let eventData = {};
+        
+        if (eventType === 'checkout.session.completed') {
+          eventData = {
+            id: `evt_test_${Date.now()}`,
+            object: 'event',
+            type: 'checkout.session.completed',
+            data: {
+              object: {
+                id: `cs_test_${Date.now()}`,
+                object: 'checkout.session',
+                customer: `cus_test_${Date.now()}`,
+                customer_details: {
+                  email: customerEmail
+                },
+                subscription: subscriptionId,
+                payment_status: 'paid',
+                mode: 'subscription'
+              }
+            }
+          };
+        } else if (eventType === 'customer.subscription.created' || eventType === 'customer.subscription.updated') {
+          eventData = {
+            id: `evt_test_${Date.now()}`,
+            object: 'event',
+            type: eventType,
+            data: {
+              object: {
+                id: subscriptionId,
+                object: 'subscription',
+                customer: `cus_test_${Date.now()}`,
+                status: 'active',
+                current_period_start: Math.floor(Date.now() / 1000),
+                current_period_end: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60, // 30 days
+                cancel_at_period_end: false,
+                items: {
+                  data: [
+                    {
+                      price: {
+                        id: priceId
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          };
+        } else if (eventType === 'invoice.paid') {
+          eventData = {
+            id: `evt_test_${Date.now()}`,
+            object: 'event',
+            type: 'invoice.paid',
+            data: {
+              object: {
+                id: `in_test_${Date.now()}`,
+                object: 'invoice',
+                customer: `cus_test_${Date.now()}`,
+                customer_email: customerEmail,
+                subscription: subscriptionId,
+                billing_reason: 'subscription_create',
+                lines: {
+                  data: [
+                    {
+                      price: {
+                        id: priceId
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          };
+        }
+        
+        // Send the webhook
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'stripe-signature': 'test_signature' // This will be ignored in development mode
+          },
+          body: JSON.stringify(eventData)
+        });
+        
+        const data = await response.json();
+        document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+        
+        if (response.ok) {
+          document.getElementById('webhook-results').innerHTML = `
+            <p class="success">✅ Webhook sent successfully</p>
+            <p><strong>Event Type:</strong> ${eventType}</p>
+            <p><strong>Price ID:</strong> ${priceId}</p>
+            <p><strong>Subscription ID:</strong> ${subscriptionId}</p>
+            <p><strong>Customer Email:</strong> ${customerEmail}</p>
+            <p><strong>Next Step:</strong> Check the server logs for webhook processing details</p>
+          `;
+        } else {
+          document.getElementById('webhook-results').innerHTML = `<p class="error">❌ Error: ${data.error || 'Unknown error'}</p>`;
+        }
+      } catch (error) {
+        document.getElementById('webhook-results').innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+        document.getElementById('response').textContent = `Error: ${error.message}`;
+      }
+    }
+    
+    async function updateSubscription() {
+      const userId = document.getElementById('sub-user-id').value;
+      const planId = document.getElementById('sub-plan-id').value;
+      const status = document.getElementById('sub-status').value;
+      const subId = document.getElementById('sub-id').value;
+      const stripeSubId = document.getElementById('sub-stripe-id').value;
+      
+      document.getElementById('subscription-results').innerHTML = '<p>Updating subscription...</p>';
+      document.getElementById('response').textContent = 'Updating...';
+      
+      try {
+        // Create the request body
+        const requestBody = {
+          userId,
+          planId,
+          status,
+          stripeSubscriptionId: stripeSubId
+        };
+        
+        if (subId) {
+          requestBody.id = subId;
+        }
+        
+        // Send the request
+        const response = await fetch('/api/debug-subscription-update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(requestBody)
+        });
+        
+        const data = await response.json();
+        document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+        
+        if (data.success) {
+          document.getElementById('subscription-results').innerHTML = `
+            <p class="success">✅ Subscription updated successfully</p>
+            <p><strong>User ID:</strong> ${userId}</p>
+            <p><strong>Plan ID:</strong> ${planId}</p>
+            <p><strong>Status:</strong> ${status}</p>
+            <p><strong>Subscription ID:</strong> ${data.subscription.id}</p>
+            <p><strong>Next Step:</strong> Refresh your subscription page to see the changes</p>
+          `;
+        } else {
+          document.getElementById('subscription-results').innerHTML = `<p class="error">❌ Error: ${data.error || 'Unknown error'}</p>`;
+        }
+      } catch (error) {
+        document.getElementById('subscription-results').innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+        document.getElementById('response').textContent = `Error: ${error.message}`;
+      }
+    }
+  </script>
+</body>
+</html>

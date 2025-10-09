@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Subscription Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #1a1a1a;
+      color: #fff;
+    }
+    h1, h2 {
+      color: #fff;
+    }
+    button {
+      padding: 10px 15px;
+      background: linear-gradient(to right, #7928ca, #ff0080);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    pre {
+      background-color: #2a2a2a;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      color: #ddd;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .card {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .success {
+      color: #4CAF50;
+    }
+    .error {
+      color: #f44336;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input, select, textarea {
+      padding: 10px;
+      margin: 5px 0;
+      width: 100%;
+      background-color: #2a2a2a;
+      border: 1px solid #444;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <h1>Email Subscription Test</h1>
+  <p>This tool helps test subscription updates using only an email address, just like the Stripe webhook does.</p>
+  
+  <div class="card">
+    <h2>1. Find User by Email</h2>
+    <p>First, let's find the user ID associated with this email.</p>
+    
+    <div class="form-group">
+      <label for="email">Email Address:</label>
+      <input type="email" id="email" value="david@uconnect.com.au">
+    </div>
+    
+    <button onclick="findUserByEmail()">Find User</button>
+    
+    <div id="user-result" style="margin-top: 15px;"></div>
+  </div>
+  
+  <div class="card">
+    <h2>2. Test Webhook Email Lookup</h2>
+    <p>Test if the webhook can correctly find a user by email.</p>
+    
+    <div class="form-group">
+      <label for="webhook-email">Email Address:</label>
+      <input type="email" id="webhook-email" value="david@uconnect.com.au">
+    </div>
+    
+    <button onclick="testWebhookEmailLookup()">Test Webhook Lookup</button>
+    
+    <div id="webhook-result" style="margin-top: 15px;"></div>
+  </div>
+  
+  <div class="card">
+    <h2>3. Update Subscription by Email</h2>
+    <p>Create or update a subscription using just the email address.</p>
+    
+    <div class="form-group">
+      <label for="sub-email">Email Address:</label>
+      <input type="email" id="sub-email" value="david@uconnect.com.au">
+    </div>
+    
+    <div class="form-group">
+      <label for="sub-stripe-id">Stripe Subscription ID:</label>
+      <input type="text" id="sub-stripe-id" value="sub_1SFrAdKIeF7PCY4JmOtS9MFU">
+    </div>
+    
+    <div class="form-group">
+      <label for="sub-price-id">Stripe Price ID:</label>
+      <input type="text" id="sub-price-id" value="price_1SELvjKIeF7PCY4Jbf4vtqC2">
+    </div>
+    
+    <button onclick="updateSubscriptionByEmail()">Update Subscription</button>
+    
+    <div id="sub-result" style="margin-top: 15px;"></div>
+  </div>
+  
+  <div class="card">
+    <h2>4. Simulate Full Webhook</h2>
+    <p>Simulate a complete webhook event with just the email and price ID.</p>
+    
+    <div class="form-group">
+      <label for="sim-email">Email Address:</label>
+      <input type="email" id="sim-email" value="david@uconnect.com.au">
+    </div>
+    
+    <div class="form-group">
+      <label for="sim-price-id">Stripe Price ID:</label>
+      <input type="text" id="sim-price-id" value="price_1SELvjKIeF7PCY4Jbf4vtqC2">
+    </div>
+    
+    <div class="form-group">
+      <label for="sim-sub-id">Stripe Subscription ID:</label>
+      <input type="text" id="sim-sub-id" value="sub_1SFrAdKIeF7PCY4JmOtS9MFU">
+    </div>
+    
+    <button onclick="simulateWebhook()">Simulate Webhook</button>
+    
+    <div id="sim-result" style="margin-top: 15px;"></div>
+  </div>
+  
+  <script>
+    async function findUserByEmail() {
+      const email = document.getElementById('email').value;
+      const resultDiv = document.getElementById('user-result');
+      
+      if (!email) {
+        resultDiv.innerHTML = '<p class="error">Please enter an email address</p>';
+        return;
+      }
+      
+      resultDiv.innerHTML = '<p>Looking up user...</p>';
+      
+      try {
+        const response = await fetch('/api/find-user-by-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email }),
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.userId) {
+          resultDiv.innerHTML = `
+            <p class="success">✅ User found!</p>
+            <p><strong>User ID:</strong> ${data.userId}</p>
+            <p><strong>Email:</strong> ${email}</p>
+            ${data.user ? `<pre>${JSON.stringify(data.user, null, 2)}</pre>` : ''}
+          `;
+          
+          // Auto-fill the user ID in other forms
+          document.getElementById('webhook-email').value = email;
+          document.getElementById('sub-email').value = email;
+          document.getElementById('sim-email').value = email;
+        } else {
+          resultDiv.innerHTML = `
+            <p class="error">❌ User not found with email: ${email}</p>
+            <p>Error: ${data.error || 'No user found with this email'}</p>
+          `;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+      }
+    }
+    
+    async function testWebhookEmailLookup() {
+      const email = document.getElementById('webhook-email').value;
+      const resultDiv = document.getElementById('webhook-result');
+      
+      if (!email) {
+        resultDiv.innerHTML = '<p class="error">Please enter an email address</p>';
+        return;
+      }
+      
+      resultDiv.innerHTML = '<p>Testing webhook email lookup...</p>';
+      
+      try {
+        const response = await fetch('/api/test-webhook-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email }),
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.userId) {
+          resultDiv.innerHTML = `
+            <p class="success">✅ Webhook can find this user!</p>
+            <p><strong>User ID:</strong> ${data.userId}</p>
+            <p><strong>Email:</strong> ${email}</p>
+            <p>This means the webhook should be able to correctly identify the user when processing events.</p>
+          `;
+        } else {
+          resultDiv.innerHTML = `
+            <p class="error">❌ Webhook cannot find this user!</p>
+            <p>Error: ${data.error || 'No user found with this email'}</p>
+            <p>This is likely why the webhook is failing - it cannot match the email to a user.</p>
+          `;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+      }
+    }
+    
+    async function updateSubscriptionByEmail() {
+      const email = document.getElementById('sub-email').value;
+      const stripeId = document.getElementById('sub-stripe-id').value;
+      const priceId = document.getElementById('sub-price-id').value;
+      const resultDiv = document.getElementById('sub-result');
+      
+      if (!email || !stripeId || !priceId) {
+        resultDiv.innerHTML = '<p class="error">Please fill in all fields</p>';
+        return;
+      }
+      
+      resultDiv.innerHTML = '<p>Updating subscription...</p>';
+      
+      try {
+        const response = await fetch('/api/update-subscription-by-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email,
+            stripeSubscriptionId: stripeId,
+            priceId
+          }),
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          resultDiv.innerHTML = `
+            <p class="success">✅ Subscription updated successfully!</p>
+            <p><strong>User ID:</strong> ${data.userId}</p>
+            <p><strong>Plan ID:</strong> ${data.planId}</p>
+            <p><strong>Stripe Subscription ID:</strong> ${stripeId}</p>
+            <p><strong>Next Step:</strong> Refresh your subscription page to see if it's working now.</p>
+            <pre>${JSON.stringify(data.subscription || {}, null, 2)}</pre>
+          `;
+        } else {
+          resultDiv.innerHTML = `<p class="error">❌ Error: ${data.error || 'Unknown error'}</p>`;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+      }
+    }
+    
+    async function simulateWebhook() {
+      const email = document.getElementById('sim-email').value;
+      const priceId = document.getElementById('sim-price-id').value;
+      const subscriptionId = document.getElementById('sim-sub-id').value;
+      const resultDiv = document.getElementById('sim-result');
+      
+      if (!email || !priceId || !subscriptionId) {
+        resultDiv.innerHTML = '<p class="error">Please fill in all fields</p>';
+        return;
+      }
+      
+      resultDiv.innerHTML = '<p>Simulating webhook...</p>';
+      
+      try {
+        // Create a webhook event similar to what Stripe would send
+        const eventData = {
+          id: `evt_test_${Date.now()}`,
+          object: 'event',
+          type: 'customer.subscription.created',
+          data: {
+            object: {
+              id: subscriptionId,
+              object: 'subscription',
+              customer: `cus_test_${Date.now()}`,
+              status: 'active',
+              current_period_start: Math.floor(Date.now() / 1000),
+              current_period_end: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60, // 30 days
+              cancel_at_period_end: false,
+              items: {
+                data: [
+                  {
+                    price: {
+                      id: priceId
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          livemode: false,
+          pending_webhooks: 1,
+          request: {
+            id: null,
+            idempotency_key: `test_${Date.now()}`
+          }
+        };
+        
+        // Add customer email to simulate what Stripe would send
+        eventData.data.object.customer_email = email;
+        
+        // Send to the webhook endpoint
+        const response = await fetch('/api/stripe/webhook', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'stripe-signature': 'test_signature' // This will be ignored in development mode
+          },
+          body: JSON.stringify(eventData)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          resultDiv.innerHTML = `
+            <p class="success">✅ Webhook simulation sent successfully!</p>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Price ID:</strong> ${priceId}</p>
+            <p><strong>Subscription ID:</strong> ${subscriptionId}</p>
+            <p><strong>Next Step:</strong> Check the server logs for webhook processing details</p>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          `;
+        } else {
+          resultDiv.innerHTML = `<p class="error">❌ Error: ${data.error || 'Unknown error'}</p>`;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+      }
+    }
+  </script>
+</body>
+</html>

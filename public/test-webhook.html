@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Webhook</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #1a1a1a;
+      color: #fff;
+    }
+    h1, h2 {
+      color: #fff;
+    }
+    button {
+      padding: 10px 15px;
+      background: linear-gradient(to right, #7928ca, #ff0080);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    textarea {
+      width: 100%;
+      height: 300px;
+      background-color: #2a2a2a;
+      color: #ddd;
+      border: 1px solid #444;
+      padding: 10px;
+      font-family: monospace;
+      margin-bottom: 10px;
+    }
+    pre {
+      background-color: #2a2a2a;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      color: #ddd;
+    }
+    .card {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .success {
+      color: #4CAF50;
+    }
+    .error {
+      color: #f44336;
+    }
+  </style>
+</head>
+<body>
+  <h1>Test Webhook</h1>
+  <p>This tool sends a test webhook event to your test endpoint.</p>
+  
+  <div class="card">
+    <h2>Webhook Event</h2>
+    <textarea id="event">
+{
+    "id": "evt_1SFl16KIeF7PCY4JoRvYgPc4",
+    "object": "event",
+    "api_version": "2025-09-30.clover",
+    "created": 1759882444,
+    "data": {
+        "object": {
+            "id": "cs_test_a1krmXVYqnpkuFGqSN8JK0EBO6UcuKBmdTwZhEKSIqCWDRQYsolKDUUMsa",
+            "object": "checkout.session",
+            "adaptive_pricing": {
+                "enabled": false
+            },
+            "after_expiration": null,
+            "allow_promotion_codes": false,
+            "amount_subtotal": 99000,
+            "amount_total": 99000,
+            "automatic_tax": {
+                "enabled": false,
+                "liability": null,
+                "provider": null,
+                "status": null
+            },
+            "billing_address_collection": "auto",
+            "cancel_url": "https://stripe.com",
+            "client_reference_id": null,
+            "client_secret": null,
+            "collected_information": {
+                "business_name": null,
+                "individual_name": null,
+                "shipping_details": null
+            },
+            "consent": null,
+            "consent_collection": {
+                "payment_method_reuse_agreement": null,
+                "promotions": "none",
+                "terms_of_service": "none"
+            },
+            "created": 1759882434,
+            "currency": "usd",
+            "currency_conversion": null,
+            "custom_fields": [],
+            "custom_text": {
+                "after_submit": null,
+                "shipping_address": null,
+                "submit": null,
+                "terms_of_service_acceptance": null
+            },
+            "customer": "cus_TC9JurqMMIEuUF",
+            "customer_creation": "if_required",
+            "customer_details": {
+                "address": {
+                    "city": null,
+                    "country": "AU",
+                    "line1": null,
+                    "line2": null,
+                    "postal_code": null,
+                    "state": null
+                },
+                "business_name": null,
+                "email": "david@uconnect.com.au",
+                "individual_name": null,
+                "name": "David Abdelmessih",
+                "phone": null,
+                "tax_exempt": "none",
+                "tax_ids": []
+            },
+            "customer_email": null,
+            "discounts": [],
+            "expires_at": 1759968834,
+            "invoice": "in_1SFl12KIeF7PCY4JY3mjoq6G",
+            "invoice_creation": null,
+            "livemode": false,
+            "locale": "auto",
+            "metadata": {},
+            "mode": "subscription",
+            "origin_context": null,
+            "payment_intent": null,
+            "payment_link": "plink_1SEevOKIeF7PCY4JQAy3m3P7",
+            "payment_method_collection": "always",
+            "payment_method_configuration_details": {
+                "id": "pmc_1SE1Q7KIeF7PCY4J5NsPwr6b",
+                "parent": null
+            },
+            "payment_method_options": {
+                "card": {
+                    "request_three_d_secure": "automatic"
+                }
+            },
+            "payment_method_types": [
+                "card",
+                "link"
+            ],
+            "payment_status": "paid",
+            "permissions": null,
+            "phone_number_collection": {
+                "enabled": false
+            },
+            "recovered_from": null,
+            "saved_payment_method_options": {
+                "allow_redisplay_filters": [
+                    "always"
+                ],
+                "payment_method_remove": "disabled",
+                "payment_method_save": null
+            },
+            "setup_intent": null,
+            "shipping_address_collection": null,
+            "shipping_cost": null,
+            "shipping_options": [],
+            "status": "complete",
+            "submit_type": "auto",
+            "subscription": "sub_1SFl15KIeF7PCY4JILqUUvsu",
+            "success_url": "http://localhost:3009/app/subscription?status=success",
+            "total_details": {
+                "amount_discount": 0,
+                "amount_shipping": 0,
+                "amount_tax": 0
+            },
+            "ui_mode": "hosted",
+            "url": null,
+            "wallet_options": null
+        }
+    },
+    "livemode": false,
+    "pending_webhooks": 1,
+    "request": {
+        "id": null,
+        "idempotency_key": null
+    },
+    "type": "checkout.session.completed"
+}
+    </textarea>
+    <button onclick="sendTestWebhook()">Send Test Webhook</button>
+  </div>
+  
+  <h2>Results:</h2>
+  <div id="results">
+    <p>No results yet</p>
+  </div>
+  
+  <h2>Raw Response:</h2>
+  <pre id="response">No response yet</pre>
+  
+  <script>
+    async function sendTestWebhook() {
+      const event = document.getElementById('event').value;
+      
+      if (!event.trim()) {
+        document.getElementById('results').innerHTML = '<p class="error">Please enter a webhook event</p>';
+        return;
+      }
+      
+      document.getElementById('results').innerHTML = '<p>Sending webhook event...</p>';
+      document.getElementById('response').textContent = 'Sending...';
+      
+      try {
+        const response = await fetch('/api/stripe/test-webhook', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: event,
+        });
+        
+        const data = await response.json();
+        document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+        
+        if (response.ok) {
+          document.getElementById('results').innerHTML = '<p class="success">✅ Webhook event sent successfully</p>';
+        } else {
+          document.getElementById('results').innerHTML = `<p class="error">❌ Error sending webhook event: ${response.status} ${response.statusText}</p>`;
+        }
+      } catch (error) {
+        document.getElementById('results').innerHTML = `<p class="error">Error: ${error.message}</p>`;
+        document.getElementById('response').textContent = `Error: ${error.message}`;
+      }
+    }
+  </script>
+</body>
+</html>

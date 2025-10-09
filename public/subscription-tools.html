@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subscription Tools</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #1a1a1a;
+      color: #fff;
+    }
+    h1, h2 {
+      color: #fff;
+    }
+    button {
+      padding: 10px 15px;
+      background: linear-gradient(to right, #7928ca, #ff0080);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    input {
+      padding: 10px;
+      margin: 5px 0;
+      width: 100%;
+      background-color: #2a2a2a;
+      border: 1px solid #444;
+      color: #fff;
+    }
+    pre {
+      background-color: #2a2a2a;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      color: #ddd;
+    }
+    .card {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .success {
+      color: #4CAF50;
+    }
+    .error {
+      color: #f44336;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      color: #ddd;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #444;
+    }
+    th {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <h1>Subscription Tools</h1>
+  <p>This tool helps you manage subscriptions directly.</p>
+  
+  <div class="card">
+    <h2>Check User Subscriptions</h2>
+    <input type="text" id="userId" placeholder="Enter User ID" value="b3c5a3d1-2f0d-4941-83c8-ed0c7cf70d33">
+    <button onclick="checkSubscriptions()">Check Subscriptions</button>
+  </div>
+  
+  <div class="card">
+    <h2>Cancel All Subscriptions</h2>
+    <button onclick="cancelSubscriptions()">Cancel All Subscriptions</button>
+  </div>
+  
+  <h2>Subscriptions:</h2>
+  <div id="subscriptions">
+    <p>No subscriptions loaded yet</p>
+  </div>
+  
+  <h2>Response:</h2>
+  <pre id="response">No response yet</pre>
+  
+  <script>
+    async function checkSubscriptions() {
+      const userId = document.getElementById('userId').value;
+      
+      if (!userId) {
+        document.getElementById('response').textContent = 'Please enter a user ID';
+        return;
+      }
+      
+      document.getElementById('response').textContent = 'Checking subscriptions...';
+      
+      try {
+        const response = await fetch('/api/subscription/check', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId }),
+        });
+        
+        const data = await response.json();
+        document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+        
+        if (data.success && data.subscriptions) {
+          let tableHtml = '<table>';
+          tableHtml += '<tr><th>ID</th><th>Status</th><th>Plan</th><th>Created</th><th>Actions</th></tr>';
+          
+          data.subscriptions.forEach(sub => {
+            tableHtml += `<tr>
+              <td>${sub.id}</td>
+              <td>${sub.status}</td>
+              <td>${sub.plan_id}</td>
+              <td>${new Date(sub.created_at).toLocaleString()}</td>
+              <td><button onclick="cancelSingleSubscription('${sub.id}')">Cancel</button></td>
+            </tr>`;
+          });
+          
+          tableHtml += '</table>';
+          document.getElementById('subscriptions').innerHTML = tableHtml;
+        } else {
+          document.getElementById('subscriptions').innerHTML = '<p>No subscriptions found</p>';
+        }
+      } catch (error) {
+        document.getElementById('response').textContent = `Error: ${error.message}`;
+        document.getElementById('subscriptions').innerHTML = '<p>Error loading subscriptions</p>';
+      }
+    }
+    
+    async function cancelSubscriptions() {
+      const userId = document.getElementById('userId').value;
+      
+      if (!userId) {
+        document.getElementById('response').textContent = 'Please enter a user ID';
+        return;
+      }
+      
+      document.getElementById('response').textContent = 'Canceling subscriptions...';
+      
+      try {
+        const response = await fetch('/api/subscription/cancel-direct', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId }),
+        });
+        
+        const data = await response.json();
+        document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+        
+        // Refresh subscriptions
+        checkSubscriptions();
+      } catch (error) {
+        document.getElementById('response').textContent = `Error: ${error.message}`;
+      }
+    }
+    
+    async function cancelSingleSubscription(subscriptionId) {
+      document.getElementById('response').textContent = `Canceling subscription ${subscriptionId}...`;
+      
+      try {
+        const response = await fetch('/api/subscription/cancel-single', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ subscriptionId }),
+        });
+        
+        const data = await response.json();
+        document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+        
+        // Refresh subscriptions
+        checkSubscriptions();
+      } catch (error) {
+        document.getElementById('response').textContent = `Error: ${error.message}`;
+      }
+    }
+  </script>
+</body>
+</html>

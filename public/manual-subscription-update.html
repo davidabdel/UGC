@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manual Subscription Update</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #1a1a1a;
+      color: #fff;
+    }
+    h1, h2 {
+      color: #fff;
+    }
+    button {
+      padding: 10px 15px;
+      background: linear-gradient(to right, #7928ca, #ff0080);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    input, select {
+      padding: 10px;
+      margin: 5px 0;
+      width: 100%;
+      background-color: #2a2a2a;
+      border: 1px solid #444;
+      color: #fff;
+    }
+    pre {
+      background-color: #2a2a2a;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      color: #ddd;
+    }
+    .card {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .success {
+      color: #4CAF50;
+    }
+    .error {
+      color: #f44336;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Manual Subscription Update</h1>
+  <p>This tool manually updates a user's subscription in the database <strong>without</strong> calling the Stripe API.</p>
+  <p class="success">The Stripe API call has been bypassed to avoid any API errors.</p>
+  
+  <div class="card">
+    <h2>Subscription Information</h2>
+    
+    <div class="form-group">
+      <label for="userId">User ID:</label>
+      <input type="text" id="userId" placeholder="Enter User ID" value="b3c5a3d1-2f0d-4941-83c8-ed0c7cf70d33">
+    </div>
+    
+    <div class="form-group">
+      <label for="subscriptionId">Stripe Subscription ID:</label>
+      <input type="text" id="subscriptionId" placeholder="Enter Stripe Subscription ID (e.g., sub_1SFlLvKIeF7PCY4J5AdzB8lj)">
+    </div>
+    
+    <div class="form-group">
+      <label for="planId">Plan ID:</label>
+      <select id="planId">
+        <option value="">Loading plans...</option>
+      </select>
+    </div>
+    
+    <button onclick="updateSubscription()">Update Subscription</button>
+  </div>
+  
+  <div id="result" class="card" style="display: none;">
+    <h2>Result</h2>
+    <div id="result-content"></div>
+  </div>
+  
+  <h2>Raw Response:</h2>
+  <pre id="response">No response yet</pre>
+  
+  <script>
+    // Load plans when the page loads
+    window.addEventListener('DOMContentLoaded', loadPlans);
+    
+    async function loadPlans() {
+      try {
+        const response = await fetch('/api/check-subscription-plans');
+        const data = await response.json();
+        
+        if (data.success && data.plans) {
+          const planSelect = document.getElementById('planId');
+          planSelect.innerHTML = '';
+          
+          data.plans.forEach(plan => {
+            const option = document.createElement('option');
+            option.value = plan.id;
+            option.textContent = `${plan.name} - $${(plan.price_monthly / 100).toFixed(2)}/month - ${plan.credits_per_month} credits`;
+            planSelect.appendChild(option);
+          });
+        } else {
+          document.getElementById('planId').innerHTML = '<option value="">Error loading plans</option>';
+        }
+      } catch (error) {
+        document.getElementById('planId').innerHTML = '<option value="">Error loading plans</option>';
+      }
+    }
+    
+    async function updateSubscription() {
+      const userId = document.getElementById('userId').value;
+      const subscriptionId = document.getElementById('subscriptionId').value;
+      const planId = document.getElementById('planId').value;
+      
+      if (!userId || !subscriptionId || !planId) {
+        document.getElementById('result').style.display = 'block';
+        document.getElementById('result-content').innerHTML = '<p class="error">Please fill in all fields</p>';
+        return;
+      }
+      
+      document.getElementById('result').style.display = 'block';
+      document.getElementById('result-content').innerHTML = '<p>Updating subscription...</p>';
+      document.getElementById('response').textContent = 'Updating...';
+      
+      try {
+        const response = await fetch('/api/manual-subscription-update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId, subscriptionId, planId }),
+        });
+        
+        const data = await response.json();
+        document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+        
+        if (data.success) {
+          document.getElementById('result-content').innerHTML = `
+            <p class="success">✅ Subscription updated successfully</p>
+            <p><strong>Plan:</strong> ${data.subscription.plan_id}</p>
+            <p><strong>Status:</strong> ${data.subscription.status}</p>
+            <p><strong>Credits:</strong> ${data.credits.balance}</p>
+          `;
+        } else {
+          document.getElementById('result-content').innerHTML = `<p class="error">❌ Error: ${data.error || 'Unknown error'}</p>`;
+        }
+      } catch (error) {
+        document.getElementById('result-content').innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+        document.getElementById('response').textContent = `Error: ${error.message}`;
+      }
+    }
+  </script>
+</body>
+</html>

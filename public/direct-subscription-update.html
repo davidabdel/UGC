@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Direct Subscription Update</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #1a1a1a;
+      color: #fff;
+    }
+    h1, h2 {
+      color: #fff;
+    }
+    button {
+      padding: 10px 15px;
+      background: linear-gradient(to right, #7928ca, #ff0080);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    input, select {
+      padding: 10px;
+      margin: 5px 0;
+      width: 100%;
+      background-color: #2a2a2a;
+      border: 1px solid #444;
+      color: #fff;
+    }
+    pre {
+      background-color: #2a2a2a;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      color: #ddd;
+    }
+    .card {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .success {
+      color: #4CAF50;
+    }
+    .error {
+      color: #f44336;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Direct Subscription Update</h1>
+  <p>This tool directly updates a user's subscription in the database without any Stripe information.</p>
+  <p class="success">⚡ SIMPLEST OPTION: Just select a user and plan, and we'll handle everything else!</p>
+  
+  <div class="card">
+    <h2>Subscription Information</h2>
+    
+    <div class="form-group">
+      <label for="userId">User ID:</label>
+      <input type="text" id="userId" placeholder="Enter User ID" value="b3c5a3d1-2f0d-4941-83c8-ed0c7cf70d33">
+    </div>
+    
+    <div class="form-group">
+      <label for="planId">Plan ID:</label>
+      <select id="planId">
+        <option value="">Loading plans...</option>
+      </select>
+    </div>
+    
+    <button onclick="updateSubscription()">Update Subscription</button>
+  </div>
+  
+  <div id="result" class="card" style="display: none;">
+    <h2>Result</h2>
+    <div id="result-content"></div>
+  </div>
+  
+  <h2>Raw Response:</h2>
+  <pre id="response">No response yet</pre>
+  
+  <script>
+    // Load plans when the page loads
+    window.addEventListener('DOMContentLoaded', loadPlans);
+    
+    async function loadPlans() {
+      try {
+        const response = await fetch('/api/check-subscription-plans');
+        const data = await response.json();
+        
+        if (data.success && data.plans) {
+          const planSelect = document.getElementById('planId');
+          planSelect.innerHTML = '';
+          
+          // Add option group for monthly plans
+          const monthlyGroup = document.createElement('optgroup');
+          monthlyGroup.label = 'Monthly Plans';
+          
+          // Add option group for yearly plans
+          const yearlyGroup = document.createElement('optgroup');
+          yearlyGroup.label = 'Yearly Plans (Save money!)';
+          
+          // Add plans to appropriate groups
+          data.plans.forEach(plan => {
+            // Skip the free plan for yearly
+            if (plan.name === 'Free') {
+              const option = document.createElement('option');
+              option.value = plan.id;
+              option.textContent = `${plan.name} - $${(plan.price_monthly / 100).toFixed(2)}/month - ${plan.credits_per_month} credits`;
+              monthlyGroup.appendChild(option);
+              return;
+            }
+            
+            // Add monthly option
+            const monthlyOption = document.createElement('option');
+            monthlyOption.value = plan.id + '_monthly';
+            monthlyOption.textContent = `${plan.name} - $${(plan.price_monthly / 100).toFixed(2)}/month - ${plan.credits_per_month} credits`;
+            monthlyGroup.appendChild(monthlyOption);
+            
+            // Add yearly option if price exists
+            if (plan.price_yearly > 0) {
+              const yearlyOption = document.createElement('option');
+              yearlyOption.value = plan.id + '_yearly';
+              const yearlySavings = Math.round((1 - (plan.price_yearly / (plan.price_monthly * 12))) * 100);
+              yearlyOption.textContent = `${plan.name} - $${(plan.price_yearly / 100).toFixed(2)}/year - ${plan.credits_per_month} credits/month (Save ${yearlySavings}%)`;
+              yearlyGroup.appendChild(yearlyOption);
+            }
+          });
+          
+          // Add groups to select
+          planSelect.appendChild(monthlyGroup);
+          planSelect.appendChild(yearlyGroup);
+        } else {
+          document.getElementById('planId').innerHTML = '<option value="">Error loading plans</option>';
+        }
+      } catch (error) {
+        document.getElementById('planId').innerHTML = '<option value="">Error loading plans</option>';
+      }
+    }
+    
+    async function updateSubscription() {
+      const userId = document.getElementById('userId').value;
+      const planValue = document.getElementById('planId').value;
+      
+      if (!userId || !planValue) {
+        document.getElementById('result').style.display = 'block';
+        document.getElementById('result-content').innerHTML = '<p class="error">Please fill in all fields</p>';
+        return;
+      }
+      
+      // Parse the plan value to determine if it's yearly or monthly
+      let planId;
+      let isYearly = false;
+      
+      if (planValue.includes('_yearly')) {
+        planId = planValue.replace('_yearly', '');
+        isYearly = true;
+      } else if (planValue.includes('_monthly')) {
+        planId = planValue.replace('_monthly', '');
+        isYearly = false;
+      } else {
+        // Free plan or other format
+        planId = planValue;
+        isYearly = false;
+      }
+      
+      document.getElementById('result').style.display = 'block';
+      document.getElementById('result-content').innerHTML = '<p>Updating subscription...</p>';
+      document.getElementById('response').textContent = 'Updating...';
+      
+      try {
+        const response = await fetch('/api/direct-subscription-update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId, planId, isYearly }),
+        });
+        
+        const data = await response.json();
+        document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+        
+        if (data.success) {
+          // Get the plan name from the select option
+          const planSelect = document.getElementById('planId');
+          const selectedOption = planSelect.options[planSelect.selectedIndex];
+          const planText = selectedOption.textContent;
+          
+          document.getElementById('result-content').innerHTML = `
+            <p class="success">✅ Subscription updated successfully</p>
+            <p><strong>Plan:</strong> ${planText}</p>
+            <p><strong>Status:</strong> ${data.subscription.status}</p>
+            <p><strong>Credits:</strong> ${data.credits.balance}</p>
+            <p><strong>Period:</strong> ${isYearly ? 'Yearly' : 'Monthly'}</p>
+            <p><strong>Next Step:</strong> Refresh your subscription page to see the changes</p>
+          `;
+        } else {
+          document.getElementById('result-content').innerHTML = `<p class="error">❌ Error: ${data.error || 'Unknown error'}</p>`;
+        }
+      } catch (error) {
+        document.getElementById('result-content').innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+        document.getElementById('response').textContent = `Error: ${error.message}`;
+      }
+    }
+  </script>
+</body>
+</html>

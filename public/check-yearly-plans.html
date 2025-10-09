@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Check Yearly Plans</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #1a1a1a;
+      color: #fff;
+    }
+    h1, h2 {
+      color: #fff;
+    }
+    button {
+      padding: 10px 15px;
+      background: linear-gradient(to right, #7928ca, #ff0080);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    pre {
+      background-color: #2a2a2a;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      color: #ddd;
+    }
+    .card {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .success {
+      color: #4CAF50;
+    }
+    .error {
+      color: #f44336;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      color: #ddd;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #444;
+    }
+    th {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <h1>Check Yearly Plans</h1>
+  <p>This tool checks if your subscription plans have the yearly price IDs configured correctly.</p>
+  
+  <div class="card">
+    <h2>Subscription Plans</h2>
+    <button onclick="checkPlans()">Check Plans</button>
+    <div id="plans-table"></div>
+  </div>
+  
+  <h2>Raw Response:</h2>
+  <pre id="response">No response yet</pre>
+  
+  <script>
+    async function checkPlans() {
+      document.getElementById('plans-table').innerHTML = 'Loading...';
+      document.getElementById('response').textContent = 'Loading...';
+      
+      try {
+        const response = await fetch('/api/check-subscription-plans');
+        const data = await response.json();
+        document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+        
+        if (data.success && data.plans) {
+          let tableHtml = '<table>';
+          tableHtml += '<tr><th>Name</th><th>Monthly Price</th><th>Yearly Price</th><th>Monthly Price ID</th><th>Yearly Price ID</th></tr>';
+          
+          data.plans.forEach(plan => {
+            const monthlyPrice = (plan.price_monthly / 100).toFixed(2);
+            const yearlyPrice = plan.price_yearly ? (plan.price_yearly / 100).toFixed(2) : 'N/A';
+            
+            tableHtml += `<tr>
+              <td>${plan.name}</td>
+              <td>$${monthlyPrice}</td>
+              <td>$${yearlyPrice}</td>
+              <td>${plan.stripe_price_id || 'Not set'}</td>
+              <td>${plan.stripe_price_id_yearly || 'Not set'}</td>
+            </tr>`;
+          });
+          
+          tableHtml += '</table>';
+          
+          // Add a message about the yearly Lite plan
+          if (data.hasYearlyLitePlan) {
+            tableHtml += `<p class="success">✅ Yearly Lite plan price ID (${data.yearlyLitePriceId}) is correctly configured.</p>`;
+          } else {
+            tableHtml += `<p class="error">❌ Yearly Lite plan price ID (${data.yearlyLitePriceId}) is not found in any plan.</p>`;
+          }
+          
+          document.getElementById('plans-table').innerHTML = tableHtml;
+        } else {
+          document.getElementById('plans-table').innerHTML = `<p class="error">Error: ${data.error || 'Unknown error'}</p>`;
+        }
+      } catch (error) {
+        document.getElementById('plans-table').innerHTML = `<p class="error">Error: ${error.message}</p>`;
+        document.getElementById('response').textContent = `Error: ${error.message}`;
+      }
+    }
+  </script>
+</body>
+</html>

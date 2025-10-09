@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Update Subscription Plans</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #1a1a1a;
+      color: #fff;
+    }
+    h1, h2 {
+      color: #fff;
+    }
+    button {
+      padding: 10px 15px;
+      background: linear-gradient(to right, #7928ca, #ff0080);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    pre {
+      background-color: #2a2a2a;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      color: #ddd;
+    }
+    .card {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .success {
+      color: #4CAF50;
+    }
+    .error {
+      color: #f44336;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      color: #ddd;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #444;
+    }
+    th {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <h1>Update Subscription Plans</h1>
+  <p>This tool updates your subscription plans with the correct Stripe price IDs.</p>
+  
+  <div class="card">
+    <h2>Update Plans</h2>
+    <p>Click the button below to update your subscription plans with the following Stripe price IDs:</p>
+    <ul>
+      <li>Lite: <code>price_1SELqMKIeF7PCY4JjPiAhvmx</code></li>
+      <li>Business: <code>price_1SELv9KIeF7PCY4J8o8mvjHB</code></li>
+      <li>Heavy: <code>price_1SELvjKIeF7PCY4Jbf4vtqC2</code></li>
+    </ul>
+    <button onclick="updatePlans()">Update Plans</button>
+  </div>
+  
+  <h2>Results:</h2>
+  <div id="results">
+    <p>No results yet</p>
+  </div>
+  
+  <div id="plans-table" style="display:none;">
+    <h2>Updated Plans:</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Price (Monthly)</th>
+          <th>Stripe Price ID</th>
+        </tr>
+      </thead>
+      <tbody id="plans-body">
+      </tbody>
+    </table>
+  </div>
+  
+  <h2>Raw Response:</h2>
+  <pre id="response">No response yet</pre>
+  
+  <script>
+    async function updatePlans() {
+      document.getElementById('results').innerHTML = '<p>Updating plans...</p>';
+      document.getElementById('response').textContent = 'Updating...';
+      document.getElementById('plans-table').style.display = 'none';
+      
+      try {
+        const response = await fetch('/api/update-plans');
+        const data = await response.json();
+        document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+        
+        let resultsHtml = '';
+        
+        if (data.success) {
+          resultsHtml += '<p class="success">✅ Subscription plans updated successfully</p>';
+          
+          // Show update results
+          if (data.updates) {
+            resultsHtml += '<ul>';
+            if (data.updates.lite === 'success') {
+              resultsHtml += '<li class="success">✅ Lite plan updated successfully</li>';
+            } else {
+              resultsHtml += '<li class="error">❌ Failed to update Lite plan</li>';
+            }
+            
+            if (data.updates.business === 'success') {
+              resultsHtml += '<li class="success">✅ Business plan updated successfully</li>';
+            } else {
+              resultsHtml += '<li class="error">❌ Failed to update Business plan</li>';
+            }
+            
+            if (data.updates.heavy === 'success') {
+              resultsHtml += '<li class="success">✅ Heavy plan updated successfully</li>';
+            } else {
+              resultsHtml += '<li class="error">❌ Failed to update Heavy plan</li>';
+            }
+            resultsHtml += '</ul>';
+          }
+          
+          // Show plans table
+          if (data.plans && data.plans.length > 0) {
+            let tableHtml = '';
+            data.plans.forEach(plan => {
+              tableHtml += `<tr>
+                <td>${plan.name}</td>
+                <td>$${(plan.price_monthly / 100).toFixed(2)}</td>
+                <td>${plan.stripe_price_id || 'Not set'}</td>
+              </tr>`;
+            });
+            document.getElementById('plans-body').innerHTML = tableHtml;
+            document.getElementById('plans-table').style.display = 'block';
+          }
+        } else {
+          resultsHtml += `<p class="error">❌ Failed to update plans: ${data.error}</p>`;
+        }
+        
+        document.getElementById('results').innerHTML = resultsHtml;
+      } catch (error) {
+        document.getElementById('results').innerHTML = `<p class="error">Error: ${error.message}</p>`;
+        document.getElementById('response').textContent = `Error: ${error.message}`;
+      }
+    }
+  </script>
+</body>
+</html>

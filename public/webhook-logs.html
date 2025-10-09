@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Webhook Debug Logs</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #1a1a1a;
+      color: #fff;
+    }
+    h1, h2 {
+      color: #fff;
+    }
+    button {
+      padding: 10px 15px;
+      background: linear-gradient(to right, #7928ca, #ff0080);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    pre {
+      background-color: #2a2a2a;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      color: #ddd;
+      max-height: 600px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .card {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .success {
+      color: #4CAF50;
+    }
+    .error {
+      color: #f44336;
+    }
+    .highlight {
+      background-color: rgba(255, 255, 0, 0.2);
+      padding: 2px 4px;
+      border-radius: 2px;
+    }
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .search-box {
+      padding: 8px;
+      background-color: #2a2a2a;
+      border: 1px solid #444;
+      color: #fff;
+      border-radius: 4px;
+      width: 300px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Webhook Debug Logs</h1>
+  <p>This tool shows detailed logs from webhook processing to help diagnose issues.</p>
+  
+  <div class="card">
+    <div class="controls">
+      <div>
+        <button onclick="refreshLogs()">Refresh Logs</button>
+        <button onclick="clearLogs()" class="error">Clear Logs</button>
+      </div>
+      <div>
+        <input type="text" id="search" placeholder="Search logs..." class="search-box" oninput="searchLogs()">
+      </div>
+    </div>
+    
+    <h2>Log Output</h2>
+    <pre id="logs">Loading logs...</pre>
+  </div>
+  
+  <div class="card">
+    <h2>Webhook Analysis</h2>
+    <div id="analysis">
+      <p>Click "Analyze Logs" to check for common webhook issues.</p>
+      <button onclick="analyzeLogs()">Analyze Logs</button>
+    </div>
+  </div>
+  
+  <script>
+    // Load logs when the page loads
+    window.addEventListener('DOMContentLoaded', refreshLogs);
+    
+    async function refreshLogs() {
+      document.getElementById('logs').textContent = 'Loading logs...';
+      
+      try {
+        const response = await fetch('/api/debug-webhook-logs');
+        const data = await response.json();
+        
+        if (data.success) {
+          const logsElement = document.getElementById('logs');
+          logsElement.textContent = data.logs || 'No logs found';
+          
+          // Save the original logs for searching
+          window.originalLogs = data.logs;
+        } else {
+          document.getElementById('logs').textContent = `Error: ${data.error || 'Unknown error'}`;
+        }
+      } catch (error) {
+        document.getElementById('logs').textContent = `Error: ${error.message}`;
+      }
+    }
+    
+    async function clearLogs() {
+      if (!confirm('Are you sure you want to clear all logs?')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/debug-webhook-logs?clear=true');
+        const data = await response.json();
+        
+        if (data.success) {
+          document.getElementById('logs').textContent = 'Logs cleared';
+          window.originalLogs = '';
+        } else {
+          document.getElementById('logs').textContent = `Error: ${data.error || 'Unknown error'}`;
+        }
+      } catch (error) {
+        document.getElementById('logs').textContent = `Error: ${error.message}`;
+      }
+    }
+    
+    function searchLogs() {
+      const searchTerm = document.getElementById('search').value.toLowerCase();
+      const logsElement = document.getElementById('logs');
+      
+      if (!window.originalLogs) {
+        return;
+      }
+      
+      if (!searchTerm) {
+        logsElement.textContent = window.originalLogs;
+        return;
+      }
+      
+      // Split by lines and highlight matches
+      const lines = window.originalLogs.split('\n');
+      const matchedLines = [];
+      let inMatchedBlock = false;
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (line.toLowerCase().includes(searchTerm)) {
+          // Add context - 3 lines before and after
+          const startIdx = Math.max(0, i - 3);
+          const endIdx = Math.min(lines.length - 1, i + 3);
+          
+          if (matchedLines.length > 0 && startIdx <= matchedLines[matchedLines.length - 1].lineNumber + 3) {
+            // Continue the current block
+            for (let j = matchedLines[matchedLines.length - 1].lineNumber + 1; j <= endIdx; j++) {
+              const isMatch = lines[j].toLowerCase().includes(searchTerm);
+              matchedLines.push({
+                text: lines[j],
+                lineNumber: j,
+                isMatch
+              });
+            }
+          } else {
+            // Start a new block
+            if (matchedLines.length > 0) {
+              matchedLines.push({ text: '...', lineNumber: -1, isMatch: false });
+            }
+            
+            for (let j = startIdx; j <= endIdx; j++) {
+              const isMatch = lines[j].toLowerCase().includes(searchTerm);
+              matchedLines.push({
+                text: lines[j],
+                lineNumber: j,
+                isMatch
+              });
+            }
+          }
+          
+          // Skip ahead to avoid duplicate lines
+          i = endIdx;
+        }
+      }
+      
+      // Format the output
+      if (matchedLines.length > 0) {
+        const formattedOutput = matchedLines.map(line => {
+          if (line.lineNumber === -1) {
+            return line.text;
+          }
+          
+          if (line.isMatch) {
+            // Highlight the search term
+            const regex = new RegExp(`(${searchTerm})`, 'gi');
+            return line.text.replace(regex, '<span class="highlight">$1</span>');
+          }
+          
+          return line.text;
+        }).join('\n');
+        
+        logsElement.innerHTML = formattedOutput;
+      } else {
+        logsElement.textContent = `No matches found for "${searchTerm}"`;
+      }
+    }
+    
+    function analyzeLogs() {
+      if (!window.originalLogs) {
+        document.getElementById('analysis').innerHTML = '<p class="error">No logs to analyze</p>';
+        return;
+      }
+      
+      const logs = window.originalLogs;
+      const issues = [];
+      
+      // Check for common issues
+      if (logs.includes('Error finding user by email')) {
+        issues.push('User lookup is failing - check that the email in the webhook matches a user in your database');
+      }
+      
+      if (logs.includes('No plan found for price')) {
+        issues.push('Price ID not found in subscription_plans table - check that your price IDs match what\'s in Stripe');
+      }
+      
+      if (logs.includes('Failed to upsert subscription')) {
+        issues.push('Database error when updating subscription - check Supabase permissions and schema');
+      }
+      
+      if (logs.includes('price_1SELvjKIeF7PCY4Jbf4vtqC2')) {
+        // Check if this is the Heavy plan
+        if (logs.includes('Found monthly plan with price ID price_1SELvjKIeF7PCY4Jbf4vtqC2')) {
+          issues.push('The webhook is correctly identifying the Heavy plan with price ID price_1SELvjKIeF7PCY4Jbf4vtqC2');
+        }
+      }
+      
+      // Generate analysis HTML
+      let analysisHtml = '<h3>Log Analysis</h3>';
+      
+      if (issues.length === 0) {
+        analysisHtml += '<p class="success">No obvious issues found in the logs. The webhook may be processing correctly but not updating the database.</p>';
+      } else {
+        analysisHtml += '<ul>';
+        issues.forEach(issue => {
+          analysisHtml += `<li>${issue}</li>`;
+        });
+        analysisHtml += '</ul>';
+      }
+      
+      // Add recommendations
+      analysisHtml += '<h3>Recommendations</h3>';
+      analysisHtml += '<ol>';
+      analysisHtml += '<li>Check if the webhook is receiving events (appears to be working)</li>';
+      analysisHtml += '<li>Verify that the price ID in the webhook matches a plan in your database</li>';
+      analysisHtml += '<li>Check that the user email in the webhook matches a user in your database</li>';
+      analysisHtml += '<li>Ensure Supabase service role key has proper permissions</li>';
+      analysisHtml += '<li>Try manually updating the subscription using the Subscription Updater tool</li>';
+      analysisHtml += '</ol>';
+      
+      analysisHtml += '<button onclick="refreshLogs()">Refresh Logs</button>';
+      
+      document.getElementById('analysis').innerHTML = analysisHtml;
+    }
+  </script>
+</body>
+</html>

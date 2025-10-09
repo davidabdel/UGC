@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Check User Subscription</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #1a1a1a;
+      color: #fff;
+    }
+    h1, h2 {
+      color: #fff;
+    }
+    button {
+      padding: 10px 15px;
+      background: linear-gradient(to right, #7928ca, #ff0080);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    input {
+      padding: 10px;
+      margin: 5px 0;
+      width: 100%;
+      background-color: #2a2a2a;
+      border: 1px solid #444;
+      color: #fff;
+    }
+    pre {
+      background-color: #2a2a2a;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      color: #ddd;
+    }
+    .card {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .success {
+      color: #4CAF50;
+    }
+    .error {
+      color: #f44336;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      color: #ddd;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #444;
+    }
+    th {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <h1>Check User Subscription</h1>
+  <p>This tool checks a user's subscription and credit information.</p>
+  
+  <div class="card">
+    <h2>User Information</h2>
+    <input type="text" id="userId" placeholder="Enter User ID" value="b3c5a3d1-2f0d-4941-83c8-ed0c7cf70d33">
+    <button onclick="checkUserSubscription()">Check Subscription</button>
+  </div>
+  
+  <div id="subscription-info"></div>
+  
+  <h2>Raw Response:</h2>
+  <pre id="response">No response yet</pre>
+  
+  <script>
+    async function checkUserSubscription() {
+      const userId = document.getElementById('userId').value;
+      
+      if (!userId) {
+        document.getElementById('subscription-info').innerHTML = '<p class="error">Please enter a user ID</p>';
+        return;
+      }
+      
+      document.getElementById('subscription-info').innerHTML = '<p>Loading...</p>';
+      document.getElementById('response').textContent = 'Loading...';
+      
+      try {
+        const response = await fetch('/api/check-user-subscription', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId }),
+        });
+        
+        const data = await response.json();
+        document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+        
+        if (data.success) {
+          let html = '';
+          
+          // Subscriptions
+          html += '<div class="card">';
+          html += '<h2>Subscriptions</h2>';
+          
+          if (data.subscriptions && data.subscriptions.length > 0) {
+            html += '<table>';
+            html += '<tr><th>Plan</th><th>Status</th><th>Start Date</th><th>End Date</th><th>Payment ID</th></tr>';
+            
+            data.subscriptions.forEach(sub => {
+              const planName = sub.subscription_plans ? sub.subscription_plans.name : 'Unknown';
+              const startDate = new Date(sub.current_period_start).toLocaleDateString();
+              const endDate = new Date(sub.current_period_end).toLocaleDateString();
+              
+              html += `<tr>
+                <td>${planName}</td>
+                <td>${sub.status}</td>
+                <td>${startDate}</td>
+                <td>${endDate}</td>
+                <td>${sub.payment_provider_subscription_id || 'N/A'}</td>
+              </tr>`;
+            });
+            
+            html += '</table>';
+          } else {
+            html += '<p>No subscriptions found</p>';
+          }
+          
+          html += '</div>';
+          
+          // Credits
+          html += '<div class="card">';
+          html += '<h2>Credits</h2>';
+          
+          if (data.credits) {
+            html += `<p><strong>Balance:</strong> ${data.credits.balance}</p>`;
+            html += `<p><strong>Last Refill:</strong> ${data.credits.last_refill_date ? new Date(data.credits.last_refill_date).toLocaleDateString() : 'Never'}</p>`;
+          } else {
+            html += '<p>No credit information found</p>';
+          }
+          
+          html += '</div>';
+          
+          // Transactions
+          if (data.transactions && data.transactions.length > 0) {
+            html += '<div class="card">';
+            html += '<h2>Recent Transactions</h2>';
+            
+            html += '<table>';
+            html += '<tr><th>Date</th><th>Description</th><th>Amount</th></tr>';
+            
+            data.transactions.forEach(tx => {
+              const date = new Date(tx.created_at).toLocaleDateString();
+              const amountClass = tx.amount > 0 ? 'success' : 'error';
+              
+              html += `<tr>
+                <td>${date}</td>
+                <td>${tx.description}</td>
+                <td class="${amountClass}">${tx.amount > 0 ? '+' : ''}${tx.amount}</td>
+              </tr>`;
+            });
+            
+            html += '</table>';
+            html += '</div>';
+          }
+          
+          document.getElementById('subscription-info').innerHTML = html;
+        } else {
+          document.getElementById('subscription-info').innerHTML = `<p class="error">Error: ${data.error || 'Unknown error'}</p>`;
+        }
+      } catch (error) {
+        document.getElementById('subscription-info').innerHTML = `<p class="error">Error: ${error.message}</p>`;
+        document.getElementById('response').textContent = `Error: ${error.message}`;
+      }
+    }
+  </script>
+</body>
+</html>

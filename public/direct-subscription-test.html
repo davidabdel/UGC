@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Subscription Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #1a1a1a;
+      color: #fff;
+    }
+    h1, h2 {
+      color: #fff;
+    }
+    button {
+      padding: 10px 15px;
+      background: linear-gradient(to right, #7928ca, #ff0080);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    pre {
+      background-color: #2a2a2a;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      color: #ddd;
+    }
+    .card {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Direct Subscription Test</h1>
+  <p>This tool bypasses the Stripe webhook and directly creates subscriptions in your database.</p>
+  
+  <div class="card">
+    <h2>Create Lite Subscription ($99/month)</h2>
+    <p>50,000 credits per month</p>
+    <button onclick="createSubscription('price_1SELqMKIeF7PCY4JjPiAhvmx')">Create Lite Subscription</button>
+  </div>
+  
+  <div class="card">
+    <h2>Create Business Subscription ($399/month)</h2>
+    <p>150,000 credits per month</p>
+    <button onclick="createSubscription('price_1SELv9KIeF7PCY4J8o8mvjHB')">Create Business Subscription</button>
+  </div>
+  
+  <div class="card">
+    <h2>Create Heavy Subscription ($799/month)</h2>
+    <p>400,000 credits per month</p>
+    <button onclick="createSubscription('price_1SELvjKIeF7PCY4Jbf4vtqC2')">Create Heavy Subscription</button>
+  </div>
+  
+  <h2>Response:</h2>
+  <pre id="response">No response yet</pre>
+  
+  <script>
+    async function createSubscription(priceId) {
+      const userId = 'b3c5a3d1-2f0d-4941-83c8-ed0c7cf70d33';
+      const email = 'david@uconnect.com.au';
+      
+      document.getElementById('response').textContent = 'Creating subscription...';
+      
+      try {
+        const response = await fetch('/api/stripe/direct-subscription', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId,
+            email,
+            priceId
+          }),
+        });
+        
+        const data = await response.json();
+        document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+        
+        if (data.success) {
+          alert('Subscription created successfully! Refresh the subscription page to see the changes.');
+          window.open('/app/subscription', '_blank');
+        }
+      } catch (error) {
+        document.getElementById('response').textContent = `Error: ${error.message}`;
+      }
+    }
+  </script>
+</body>
+</html>

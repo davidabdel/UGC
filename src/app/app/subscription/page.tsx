@@ -46,7 +46,8 @@ export default function SubscriptionPage() {
   } as const
 
   const getStripeLinkForPlan = (planName: string) => {
-    const key = planName.toLowerCase()
+    // Normalize plan name (strip " Yearly" suffix for link lookup)
+    const key = planName.replace(/\s+Yearly$/i, '').toLowerCase()
     const cycle = billingCycle === 'yearly' ? 'yearly' : 'monthly'
     if (key === 'lite') return links.lite[cycle]
     if (key === 'business') return links.business[cycle]
@@ -54,6 +55,30 @@ export default function SubscriptionPage() {
     return '#'
   }
   
+  // Check for status=success in URL and refresh data
+  useEffect(() => {
+    // Check if we have a success status in the URL
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const status = params.get('status')
+      
+      if (status === 'success') {
+        // Clear the URL parameters without refreshing the page
+        const url = new URL(window.location.href)
+        url.searchParams.delete('status')
+        window.history.replaceState({}, '', url)
+        
+        // Show a success message
+        alert('Payment successful! Your subscription has been updated.')
+        
+        // Refresh data after a short delay to allow webhook processing
+        setTimeout(() => {
+          handleRefresh()
+        }, 2000)
+      }
+    }
+  }, [])
+
   useEffect(() => {
     async function loadSubscriptionData() {
       if (!user) return
@@ -110,11 +135,19 @@ export default function SubscriptionPage() {
           if (creditsResult.credits) {
             setCredits(creditsResult.credits)
           } else if (user) {
-            // No credits found, create initial credits
-            console.log('No credits found, creating initial credits')
-            const createCreditsResult = await createInitialCredits(user.id)
-            if (createCreditsResult.success) {
-              setCredits(createCreditsResult.credits || null)
+            // Only create initial credits if no active subscription or Free plan
+            const activeSub = subscriptionResult.success ? subscriptionResult.subscription : null
+            const isFree = !activeSub || (activeSub.plan && (activeSub.plan.price_monthly ?? 0) === 0 && (activeSub.plan.price_yearly ?? 0) === 0)
+            console.log('No credits found. Active sub:', !!activeSub, 'IsFree:', isFree)
+            if (isFree) {
+              console.log('Creating initial credits (free plan)')
+              const createCreditsResult = await createInitialCredits(user.id)
+              if (createCreditsResult.success) {
+                setCredits(createCreditsResult.credits || null)
+              }
+            } else {
+              console.log('Skipping initial credits because user has paid plan')
+              setCredits(null)
             }
           } else {
             setCredits(null)
@@ -311,11 +344,19 @@ export default function SubscriptionPage() {
           if (creditsResult.credits) {
             setCredits(creditsResult.credits)
           } else {
-            // No credits found, create initial credits
-            console.log('No credits found, creating initial credits')
-            const createCreditsResult = await createInitialCredits(user.id)
-            if (createCreditsResult.success) {
-              setCredits(createCreditsResult.credits || null)
+            // Only create initial credits if no active subscription or Free plan
+            const activeSub = subscriptionResult.success ? subscriptionResult.subscription : null
+            const isFree = !activeSub || (activeSub?.plan && (activeSub.plan.price_monthly ?? 0) === 0 && (activeSub.plan.price_yearly ?? 0) === 0)
+            console.log('No credits found (refresh). Active sub:', !!activeSub, 'IsFree:', isFree)
+            if (isFree) {
+              console.log('Creating initial credits (free plan) during refresh')
+              const createCreditsResult = await createInitialCredits(user.id)
+              if (createCreditsResult.success) {
+                setCredits(createCreditsResult.credits || null)
+              }
+            } else {
+              console.log('Skipping initial credits during refresh because user has paid plan')
+              setCredits(null)
             }
           }
         } else {
@@ -384,17 +425,38 @@ export default function SubscriptionPage() {
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h3 className="text-lg font-medium">{currentPlan?.name || 'Free'} Plan</h3>
-                    <p className="text-white/70">{currentPlan?.description || 'Basic access with limited features'}</p>
+                    {subscription.status === 'canceled' ? (
+                      <>
+                        <h3 className="text-lg font-medium">Free Plan</h3>
+                        <p className="text-white/70">Basic access with limited features</p>
+                        <p className="text-sm text-white/60 mt-1">
+                          Previous plan: {currentPlan?.name || 'Unknown'}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <h3 className="text-lg font-medium">{currentPlan?.name || 'Free'} Plan</h3>
+                        <p className="text-white/70">{currentPlan?.description || 'Basic access with limited features'}</p>
+                      </>
+                    )}
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-medium">
-                      {formatPrice(billingCycle === 'monthly' ? currentPlan?.price_monthly || 0 : currentPlan?.price_yearly || 0)}
-                      <span className="text-sm text-white/60">/{billingCycle === 'monthly' ? 'month' : 'year'}</span>
-                    </div>
-                    <div className="text-sm text-white/60">
-                      {subscription && (subscription.status === 'active' ? 'Active' : subscription.status)}
-                    </div>
+                    {subscription.status === 'canceled' ? (
+                      <div className="text-lg font-medium">
+                        $0.00<span className="text-sm text-white/60">/month</span>
+                        <div className="text-sm text-red-400">canceled</div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="text-lg font-medium">
+                          {formatPrice(billingCycle === 'monthly' ? currentPlan?.price_monthly || 0 : currentPlan?.price_yearly || 0)}
+                          <span className="text-sm text-white/60">/{billingCycle === 'monthly' ? 'month' : 'year'}</span>
+                        </div>
+                        <div className="text-sm text-white/60">
+                          {subscription.status === 'active' ? 'Active' : subscription.status}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
                 
@@ -406,16 +468,24 @@ export default function SubscriptionPage() {
                     </span>
                   </div>
                   
-                  <div className="flex justify-between">
+                  <div className="flex justify-between mb-2">
                     <span className="text-white/70">Credits per month</span>
                     <span>{currentPlan?.credits_per_month || 100}</span>
                   </div>
+                  
+                  {subscription.status === 'canceled' && (
+                    <div className="flex justify-between">
+                      <span className="text-white/70">Credits expire on</span>
+                      <span>{subscription && formatDate(subscription.current_period_end)}</span>
+                    </div>
+                  )}
                 </div>
                 
                 {subscription && subscription.cancel_at_period_end && (
                   <div className="mt-4 p-3 bg-yellow-500/20 border border-yellow-500/50 rounded-lg">
                     <p className="text-sm">
-                      Your subscription will be canceled at the end of the current billing period.
+                      Your subscription will be canceled at the end of the current billing period on {formatDate(subscription.current_period_end)}.
+                      Your remaining credits will expire on this date.
                     </p>
                   </div>
                 )}
@@ -529,8 +599,15 @@ export default function SubscriptionPage() {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {plans.map(plan => {
-                const isCurrentPlan = currentPlan?.id === plan.id;
+              {(
+                // Show only Monthly or Yearly entries depending on toggle
+                plans.filter(p => billingCycle === 'monthly' ? !/\sYearly$/i.test(p.name) : /\sYearly$/i.test(p.name))
+              ).map(plan => {
+                // If subscription is canceled or set to cancel, the Free plan is the current plan
+                const isCurrentPlan = 
+                  (subscription?.status === 'canceled' || subscription?.cancel_at_period_end === true)
+                  ? plan.name === 'Free'
+                  : currentPlan?.id === plan.id;
                 const price = billingCycle === 'monthly' ? plan.price_monthly : plan.price_yearly;
                 
                 return (

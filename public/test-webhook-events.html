@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Webhook Events</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #1a1a1a;
+      color: #fff;
+    }
+    h1, h2, h3 {
+      color: #fff;
+    }
+    button {
+      padding: 10px 15px;
+      background: linear-gradient(to right, #7928ca, #ff0080);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    textarea {
+      width: 100%;
+      height: 300px;
+      background-color: #2a2a2a;
+      color: #ddd;
+      border: 1px solid #444;
+      padding: 10px;
+      font-family: monospace;
+      margin-bottom: 10px;
+    }
+    pre {
+      background-color: #2a2a2a;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      color: #ddd;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .card {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .success {
+      color: #4CAF50;
+    }
+    .error {
+      color: #f44336;
+    }
+    .tabs {
+      display: flex;
+      margin-bottom: 20px;
+    }
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      background-color: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      margin-right: 5px;
+    }
+    .tab.active {
+      background-color: rgba(255, 255, 255, 0.2);
+      border-bottom: 2px solid #7928ca;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input, select {
+      padding: 10px;
+      margin: 5px 0;
+      width: 100%;
+      background-color: #2a2a2a;
+      border: 1px solid #444;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <h1>Test Webhook Events</h1>
+  <p>This tool helps test webhook events with the fixed webhook handler.</p>
+  
+  <div class="tabs">
+    <div class="tab active" data-tab="checkout">Checkout Session</div>
+    <div class="tab" data-tab="invoice">Invoice Paid</div>
+    <div class="tab" data-tab="subscription">Subscription Created</div>
+    <div class="tab" data-tab="custom">Custom Event</div>
+  </div>
+  
+  <div id="checkout-tab" class="tab-content active">
+    <div class="card">
+      <h2>Test checkout.session.completed Event</h2>
+      <p>This simulates a completed checkout session from Stripe.</p>
+      
+      <div class="form-group">
+        <label for="checkout-email">Customer Email:</label>
+        <input type="email" id="checkout-email" value="david@uconnect.com.au">
+      </div>
+      
+      <div class="form-group">
+        <label for="checkout-price">Price ID:</label>
+        <select id="checkout-price">
+          <option value="price_1SELqMKIeF7PCY4JjPiAhvmx">Lite Monthly (price_1SELqMKIeF7PCY4JjPiAhvmx)</option>
+          <option value="price_1SELtRKIeF7PCY4Jti48TBYA">Lite Yearly (price_1SELtRKIeF7PCY4Jti48TBYA)</option>
+          <option value="price_1SELv9KIeF7PCY4J8o8mvjHB" selected>Business Monthly (price_1SELv9KIeF7PCY4J8o8mvjHB)</option>
+          <option value="price_1SELvjKIeF7PCY4JDmxnPFvY">Business Yearly (price_1SELvjKIeF7PCY4JDmxnPFvY)</option>
+          <option value="price_1SELvjKIeF7PCY4Jbf4vtqC2">Heavy Monthly (price_1SELvjKIeF7PCY4Jbf4vtqC2)</option>
+          <option value="price_1SELvjKIeF7PCY4JYvgmLtXB">Heavy Yearly (price_1SELvjKIeF7PCY4JYvgmLtXB)</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="checkout-sub-id">Subscription ID:</label>
+        <input type="text" id="checkout-sub-id" value="sub_test_checkout_123">
+      </div>
+      
+      <button onclick="sendCheckoutEvent()">Send Checkout Event</button>
+      
+      <div id="checkout-result" style="margin-top: 15px;"></div>
+    </div>
+  </div>
+  
+  <div id="invoice-tab" class="tab-content">
+    <div class="card">
+      <h2>Test invoice.paid Event</h2>
+      <p>This simulates a paid invoice from Stripe.</p>
+      
+      <div class="form-group">
+        <label for="invoice-email">Customer Email:</label>
+        <input type="email" id="invoice-email" value="david@uconnect.com.au">
+      </div>
+      
+      <div class="form-group">
+        <label for="invoice-price">Price ID:</label>
+        <select id="invoice-price">
+          <option value="price_1SELqMKIeF7PCY4JjPiAhvmx">Lite Monthly (price_1SELqMKIeF7PCY4JjPiAhvmx)</option>
+          <option value="price_1SELtRKIeF7PCY4Jti48TBYA">Lite Yearly (price_1SELtRKIeF7PCY4Jti48TBYA)</option>
+          <option value="price_1SELv9KIeF7PCY4J8o8mvjHB" selected>Business Monthly (price_1SELv9KIeF7PCY4J8o8mvjHB)</option>
+          <option value="price_1SELvjKIeF7PCY4JDmxnPFvY">Business Yearly (price_1SELvjKIeF7PCY4JDmxnPFvY)</option>
+          <option value="price_1SELvjKIeF7PCY4Jbf4vtqC2">Heavy Monthly (price_1SELvjKIeF7PCY4Jbf4vtqC2)</option>
+          <option value="price_1SELvjKIeF7PCY4JYvgmLtXB">Heavy Yearly (price_1SELvjKIeF7PCY4JYvgmLtXB)</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="invoice-sub-id">Subscription ID:</label>
+        <input type="text" id="invoice-sub-id" value="sub_test_invoice_123">
+      </div>
+      
+      <div class="form-group">
+        <label for="invoice-reason">Billing Reason:</label>
+        <select id="invoice-reason">
+          <option value="subscription_create">subscription_create (First payment)</option>
+          <option value="subscription_cycle">subscription_cycle (Renewal)</option>
+        </select>
+      </div>
+      
+      <button onclick="sendInvoiceEvent()">Send Invoice Event</button>
+      
+      <div id="invoice-result" style="margin-top: 15px;"></div>
+    </div>
+  </div>
+  
+  <div id="subscription-tab" class="tab-content">
+    <div class="card">
+      <h2>Test customer.subscription.created Event</h2>
+      <p>This simulates a subscription creation event from Stripe.</p>
+      
+      <div class="form-group">
+        <label for="sub-email">Customer Email:</label>
+        <input type="email" id="sub-email" value="david@uconnect.com.au">
+      </div>
+      
+      <div class="form-group">
+        <label for="sub-price">Price ID:</label>
+        <select id="sub-price">
+          <option value="price_1SELqMKIeF7PCY4JjPiAhvmx">Lite Monthly (price_1SELqMKIeF7PCY4JjPiAhvmx)</option>
+          <option value="price_1SELtRKIeF7PCY4Jti48TBYA">Lite Yearly (price_1SELtRKIeF7PCY4Jti48TBYA)</option>
+          <option value="price_1SELv9KIeF7PCY4J8o8mvjHB" selected>Business Monthly (price_1SELv9KIeF7PCY4J8o8mvjHB)</option>
+          <option value="price_1SELvjKIeF7PCY4JDmxnPFvY">Business Yearly (price_1SELvjKIeF7PCY4JDmxnPFvY)</option>
+          <option value="price_1SELvjKIeF7PCY4Jbf4vtqC2">Heavy Monthly (price_1SELvjKIeF7PCY4Jbf4vtqC2)</option>
+          <option value="price_1SELvjKIeF7PCY4JYvgmLtXB">Heavy Yearly (price_1SELvjKIeF7PCY4JYvgmLtXB)</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="sub-id">Subscription ID:</label>
+        <input type="text" id="sub-id" value="sub_test_created_123">
+      </div>
+      
+      <button onclick="sendSubscriptionEvent()">Send Subscription Event</button>
+      
+      <div id="sub-result" style="margin-top: 15px;"></div>
+    </div>
+  </div>
+  
+  <div id="custom-tab" class="tab-content">
+    <div class="card">
+      <h2>Send Custom Webhook Event</h2>
+      <p>Paste your own webhook event JSON and send it to the webhook endpoint.</p>
+      
+      <div class="form-group">
+        <label for="custom-event">Event JSON:</label>
+        <textarea id="custom-event" placeholder="Paste your webhook event JSON here..."></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label for="webhook-endpoint">Webhook Endpoint:</label>
+        <select id="webhook-endpoint">
+          <option value="/api/stripe/webhook">Original Webhook (/api/stripe/webhook)</option>
+          <option value="/api/stripe/webhook-fix" selected>Fixed Webhook (/api/stripe/webhook-fix)</option>
+        </select>
+      </div>
+      
+      <button onclick="sendCustomEvent()">Send Custom Event</button>
+      
+      <div id="custom-result" style="margin-top: 15px;"></div>
+    </div>
+  </div>
+  
+  <script>
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Remove active class from all tabs
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        // Add active class to clicked tab
+        tab.classList.add('active');
+        document.getElementById(`${tab.dataset.tab}-tab`).classList.add('active');
+      });
+    });
+    
+    // Send checkout.session.completed event
+    async function sendCheckoutEvent() {
+      const email = document.getElementById('checkout-email').value;
+      const priceId = document.getElementById('checkout-price').value;
+      const subscriptionId = document.getElementById('checkout-sub-id').value;
+      const resultDiv = document.getElementById('checkout-result');
+      
+      if (!email || !priceId || !subscriptionId) {
+        resultDiv.innerHTML = '<p class="error">Please fill in all fields</p>';
+        return;
+      }
+      
+      resultDiv.innerHTML = '<p>Sending checkout event...</p>';
+      
+      try {
+        // Create a checkout.session.completed event
+        const eventData = {
+          id: `evt_test_${Date.now()}`,
+          object: 'event',
+          type: 'checkout.session.completed',
+          data: {
+            object: {
+              id: `cs_test_${Date.now()}`,
+              object: 'checkout.session',
+              customer: `cus_test_${Date.now()}`,
+              customer_details: {
+                email: email,
+                name: 'Test Customer'
+              },
+              subscription: subscriptionId,
+              payment_status: 'paid',
+              mode: 'subscription',
+              amount_total: 9900,
+              currency: 'usd',
+              status: 'complete'
+            }
+          }
+        };
+        
+        // Send to the webhook endpoint
+        const response = await fetch('/api/stripe/webhook-fix', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'stripe-signature': 'test_signature'
+          },
+          body: JSON.stringify(eventData)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          resultDiv.innerHTML = `
+            <p class="success">✅ Checkout event sent successfully!</p>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Subscription ID:</strong> ${subscriptionId}</p>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          `;
+        } else {
+          resultDiv.innerHTML = `<p class="error">❌ Error: ${data.error || 'Unknown error'}</p>`;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+      }
+    }
+    
+    // Send invoice.paid event
+    async function sendInvoiceEvent() {
+      const email = document.getElementById('invoice-email').value;
+      const priceId = document.getElementById('invoice-price').value;
+      const subscriptionId = document.getElementById('invoice-sub-id').value;
+      const billingReason = document.getElementById('invoice-reason').value;
+      const resultDiv = document.getElementById('invoice-result');
+      
+      if (!email || !priceId || !subscriptionId) {
+        resultDiv.innerHTML = '<p class="error">Please fill in all fields</p>';
+        return;
+      }
+      
+      resultDiv.innerHTML = '<p>Sending invoice event...</p>';
+      
+      try {
+        // Create an invoice.paid event
+        const eventData = {
+          id: `evt_test_${Date.now()}`,
+          object: 'event',
+          type: 'invoice.paid',
+          data: {
+            object: {
+              id: `in_test_${Date.now()}`,
+              object: 'invoice',
+              customer: `cus_test_${Date.now()}`,
+              customer_email: email,
+              subscription: subscriptionId,
+              billing_reason: billingReason,
+              status: 'paid',
+              lines: {
+                data: [
+                  {
+                    price: {
+                      id: priceId
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        };
+        
+        // Send to the webhook endpoint
+        const response = await fetch('/api/stripe/webhook-fix', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'stripe-signature': 'test_signature'
+          },
+          body: JSON.stringify(eventData)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          resultDiv.innerHTML = `
+            <p class="success">✅ Invoice event sent successfully!</p>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Subscription ID:</strong> ${subscriptionId}</p>
+            <p><strong>Billing Reason:</strong> ${billingReason}</p>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          `;
+        } else {
+          resultDiv.innerHTML = `<p class="error">❌ Error: ${data.error || 'Unknown error'}</p>`;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+      }
+    }
+    
+    // Send customer.subscription.created event
+    async function sendSubscriptionEvent() {
+      const email = document.getElementById('sub-email').value;
+      const priceId = document.getElementById('sub-price').value;
+      const subscriptionId = document.getElementById('sub-id').value;
+      const resultDiv = document.getElementById('sub-result');
+      
+      if (!email || !priceId || !subscriptionId) {
+        resultDiv.innerHTML = '<p class="error">Please fill in all fields</p>';
+        return;
+      }
+      
+      resultDiv.innerHTML = '<p>Sending subscription event...</p>';
+      
+      try {
+        // Create a customer.subscription.created event
+        const eventData = {
+          id: `evt_test_${Date.now()}`,
+          object: 'event',
+          type: 'customer.subscription.created',
+          data: {
+            object: {
+              id: subscriptionId,
+              object: 'subscription',
+              customer: `cus_test_${Date.now()}`,
+              customer_email: email,
+              status: 'active',
+              current_period_start: Math.floor(Date.now() / 1000),
+              current_period_end: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60, // 30 days
+              cancel_at_period_end: false,
+              items: {
+                data: [
+                  {
+                    price: {
+                      id: priceId
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        };
+        
+        // Send to the webhook endpoint
+        const response = await fetch('/api/stripe/webhook-fix', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'stripe-signature': 'test_signature'
+          },
+          body: JSON.stringify(eventData)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          resultDiv.innerHTML = `
+            <p class="success">✅ Subscription event sent successfully!</p>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Subscription ID:</strong> ${subscriptionId}</p>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          `;
+        } else {
+          resultDiv.innerHTML = `<p class="error">❌ Error: ${data.error || 'Unknown error'}</p>`;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+      }
+    }
+    
+    // Send custom event
+    async function sendCustomEvent() {
+      const eventJson = document.getElementById('custom-event').value;
+      const endpoint = document.getElementById('webhook-endpoint').value;
+      const resultDiv = document.getElementById('custom-result');
+      
+      if (!eventJson) {
+        resultDiv.innerHTML = '<p class="error">Please enter event JSON</p>';
+        return;
+      }
+      
+      resultDiv.innerHTML = '<p>Sending custom event...</p>';
+      
+      try {
+        // Parse the JSON to validate it
+        const eventData = JSON.parse(eventJson);
+        
+        // Send to the webhook endpoint
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'stripe-signature': 'test_signature'
+          },
+          body: JSON.stringify(eventData)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          resultDiv.innerHTML = `
+            <p class="success">✅ Custom event sent successfully!</p>
+            <p><strong>Event Type:</strong> ${eventData.type || 'Unknown'}</p>
+            <p><strong>Endpoint:</strong> ${endpoint}</p>
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          `;
+        } else {
+          resultDiv.innerHTML = `<p class="error">❌ Error: ${data.error || 'Unknown error'}</p>`;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+      }
+    }
+  </script>
+</body>
+</html>
