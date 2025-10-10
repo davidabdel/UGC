@@ -1,14 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize Supabase admin client (bypasses RLS)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://jkgkuiuycqyzobbiwxpx.supabase.co';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+// Ensure this route is always executed at request time and on Node.js runtime
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest) {
   try {
     console.log('Checking subscription plans');
+    
+    // Lazily initialize Supabase admin client (bypasses RLS) at request time
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Supabase env vars missing at runtime');
+      return NextResponse.json({ 
+        error: 'Server misconfigured: Supabase env vars missing',
+      }, { status: 500 });
+    }
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
     // We'll check if the column exists by trying to select it
     // If it doesn't exist, this will fail with a specific error
