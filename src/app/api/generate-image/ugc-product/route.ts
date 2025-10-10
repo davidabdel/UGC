@@ -5,7 +5,6 @@ export const runtime = "nodejs";
 function env(name: string) {
   return process.env[name];
 }
-
 export async function POST(req: Request) {
   try {
     const form = await req.formData();
@@ -15,6 +14,11 @@ export async function POST(req: Request) {
     const personaSummary = (form.get("personaSummary") as string) || "";
     const aspectRatio = (form.get("aspectRatio") as string) || "16:9";
     const personaMode = (form.get("personaMode") as string) || "";
+    const imageSizeRaw =
+      (form.get("imageSize") as string) ||
+      (form.get("outputSize") as string) ||
+      (form.get("size") as string) ||
+      "";
 
     const KIE_API_KEY = env("KIE_API_KEY");
     const KIE_API_BASE = env("KIE_API_BASE") ?? "https://api.kie.ai";
@@ -30,7 +34,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Product image file is required" }, { status: 400 });
     }
 
-    const image_size = ["16:9", "9:16", "1:1"].includes(aspectRatio) ? aspectRatio : "auto";
+    // Compute image_size once using either explicit pixel size, extended ratios, or fallback
+    const pixelSizeOk = /^(?:[5-9]\d{2}|1\d{3}|2\d{3})x(?:[5-9]\d{2}|1\d{3}|2\d{3})$/.test(imageSizeRaw);
+    const ratioOk = /^(?:\d{1,2}):(\d{1,2})$/.test(imageSizeRaw);
+    const allowedRatios = new Set([
+      "16:9",
+      "9:16",
+      "1:1",
+      "4:5",
+      "5:4",
+      "3:2",
+      "2:3",
+      "4:3",
+      "3:4",
+      "21:9",
+    ]);
+    const image_size = imageSizeRaw && (pixelSizeOk || ratioOk || allowedRatios.has(imageSizeRaw))
+      ? imageSizeRaw
+      : allowedRatios.has(aspectRatio)
+      ? aspectRatio
+      : "auto";
 
     // Upload product image
     let productUrl: string | undefined;
