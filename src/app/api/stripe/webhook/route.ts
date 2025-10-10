@@ -1,16 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_API_KEY || '', {
-  apiVersion: '2023-10-16',
-});
+// Ensure runtime is dynamic and Node.js so we don't static-optimize this route
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
-// Initialize Supabase admin client (bypasses RLS)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://jkgkuiuycqyzobbiwxpx.supabase.co';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+// Lazy initializers
+function getSupabaseAdmin(): SupabaseClient {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error('Supabase env vars missing');
+  }
+  return createClient(url, key);
+}
+
+function getStripe(): Stripe {
+  const key = process.env.STRIPE_API_KEY;
+  if (!key) {
+    throw new Error('Stripe API key missing');
+  }
+  // Omit apiVersion here to avoid TS/type mismatches during build
+  return new Stripe(key);
+}
 
 // Hardcoded price to credits mapping for fallback
 const PRICE_TO_CREDITS_MAP: Record<string, { name: string, credits: number }> = {
@@ -50,6 +63,7 @@ async function getPlanDetails(priceId: string): Promise<{ planId: string | null,
   console.log(`WEBHOOK: Looking up plan details for price ID: ${priceId}`);
   
   try {
+    const supabase = getSupabaseAdmin();
     // First check if this is a yearly price ID
     console.log(`WEBHOOK: Checking if this is a yearly price ID: ${priceId}`);
     const { data: yearlyPlanData, error: yearlyPlanError } = await supabase
@@ -175,6 +189,7 @@ async function getUserByEmail(email: string): Promise<string | null> {
     }
     
     // First try to find the user in the users table
+    const supabase = getSupabaseAdmin();
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('id')
@@ -193,14 +208,14 @@ async function getUserByEmail(email: string): Promise<string | null> {
       const { data: authData, error: authError } = await supabase
         .auth
         .admin
-        .listUsers({
-          filter: `email.eq.${email}`
-        });
-        
+        .listUsers();
       if (!authError && authData && authData.users.length > 0) {
-        const userId = authData.users[0].id;
-        console.log(`Found user in auth.users with ID: ${userId}`);
-        return userId;
+        const match = authData.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+        const userId = match?.id;
+        if (userId) {
+          console.log(`Found user in auth.users with ID: ${userId}`);
+          return userId;
+        }
       }
     } catch (e) {
       console.error('Error querying auth.users:', e);
@@ -233,6 +248,7 @@ async function addCreditsToUser(userId: string, credits: number, description: st
     console.log(`Adding ${credits} credits to user ${userId}`);
     
     // First, check if the user already has a credits record
+    const supabase = getSupabaseAdmin();
     const { data: existingCredits, error: checkError } = await supabase
       .from('user_credits')
       .select('*')
@@ -329,6 +345,7 @@ async function upsertSubscription(
     });
     
     // Check if a subscription exists for this user (keep a single row per user)
+    const supabase = getSupabaseAdmin();
     const { data: existingSub, error: findError } = await supabase
       .from('user_subscriptions')
       .select('*')
@@ -458,7 +475,8 @@ export async function POST(req: NextRequest) {
         // Fetch the real subscription from Stripe to get the exact priceId
         try {
           console.log(`CHECKOUT: Fetching subscription from Stripe: ${session.subscription}`);
-          const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+          const stripe = getStripe();
+      const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
 
           // Get the price ID from the subscription
           const priceId = subscription.items?.data?.[0]?.price?.id;
@@ -545,18 +563,20 @@ export async function POST(req: NextRequest) {
         
         // Get price ID from invoice line items
         let priceId: string | null = null;
-        
-        if (invoice.lines?.data?.length > 0) {
-          const lineItem = invoice.lines.data[0];
+        const invAny = invoice as any;
+        if (invAny.lines?.data?.length > 0) {
+          const lineItem = invAny.lines.data[0] as any;
           if (lineItem.price?.id) {
-            priceId = lineItem.price.id;
+            priceId = lineItem.price.id as string;
           }
         }
         
         // If we couldn't get the price ID from the invoice, get it from the subscription
         if (!priceId) {
           try {
-            const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
+            const stripe = getStripe();
+            const subId = (invoice as any).subscription as string;
+            const subscription = await stripe.subscriptions.retrieve(subId);
             if (subscription.items?.data?.length > 0) {
               priceId = subscription.items.data[0].price.id;
             }
