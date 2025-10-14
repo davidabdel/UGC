@@ -70,8 +70,8 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isAuthRoute && session) {
-    // Redirect to app if accessing auth routes with a session
-    return NextResponse.redirect(new URL('/app', request.url))
+    // Redirect to app create if accessing auth routes with a session
+    return NextResponse.redirect(new URL('/app/create', request.url))
   }
 
   return response

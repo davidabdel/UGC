@@ -36,14 +36,30 @@ export default function RegisterPage() {
     }
     
     try {
-      const { error } = await signUp(email, password, name);
-      if (error) {
-        setError(error.message);
-      } else {
-        // Redirect immediately to a verify email screen
-        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+      // Start sign-up, but don't make the user wait if the network is slow.
+      let navigated = false;
+      const navigateQuickly = () => {
+        if (!navigated) {
+          navigated = true;
+          router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+        }
+      };
+
+      // Fire a short timeout; if signup hasn't completed by then, go to verify page.
+      const timeoutId = setTimeout(navigateQuickly, 1500);
+
+      // Perform the actual sign-up
+      const { error: signUpError } = await signUp(email, password, name);
+      clearTimeout(timeoutId);
+
+      if (signUpError) {
+        // If we already navigated, silently ignore; otherwise show error.
+        if (!navigated) setError(signUpError.message);
         return;
       }
+      // Successful and fast: navigate now (if not already)
+      navigateQuickly();
+      return;
     } catch (err: any) {
       setError(err.message || 'An error occurred during registration');
     } finally {
