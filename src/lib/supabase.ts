@@ -1,9 +1,21 @@
 import { createBrowserClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 
-// Hardcoded values for testing
-const supabaseUrl = 'https://jkgkuiuycqyzobbiwxpx.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprZ2t1aXV5Y3F5em9iYml3eHB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkyMjQyMjYsImV4cCI6MjA3NDgwMDIyNn0.WkwwTwI-S_pmD-8xb2mL8P2-ezMCSSXDtqsipEbwUvQ'
+// Read from environment variables (must be set in .env.local)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  // Log a helpful message in development to aid debugging
+  if (typeof window !== 'undefined') {
+    // client-side
+    console.warn('Supabase env vars are missing. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY')
+  } else {
+    // server-side
+    // eslint-disable-next-line no-console
+    console.warn('Supabase env vars are missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your environment.')
+  }
+}
 
 // Create a single supabase client for the entire application
 export const createSupabaseClient = () => {

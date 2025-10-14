@@ -9,7 +9,6 @@ import LoadingScreen from "@/components/ui/LoadingScreen";
 import { getUserCredits } from "@/lib/subscription-service";
 
 const nav = [
-  { href: "/app", label: "Home" },
   { href: "/app/create", label: "Create New Ad" },
   { href: "/app/projects", label: "My Projects" },
   { href: "/app/subscription", label: "Subscription" },

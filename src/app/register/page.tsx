@@ -40,11 +40,9 @@ export default function RegisterPage() {
       if (error) {
         setError(error.message);
       } else {
-        setSuccessMessage('Registration successful! Please check your email to confirm your account.');
-        // Optionally redirect after a delay
-        setTimeout(() => {
-          router.push('/login');
-        }, 3000);
+        // Redirect immediately to a verify email screen
+        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+        return;
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred during registration');
@@ -98,6 +96,7 @@ export default function RegisterPage() {
           )}
           
           <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+            <fieldset disabled={isLoading} className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="name" className="text-sm text-white/85">Name</label>
               <input 
@@ -153,6 +152,7 @@ export default function RegisterPage() {
             >
               {isLoading ? 'Creating account...' : 'Create account'}
             </button>
+            </fieldset>
           </form>
 
           <div className="my-5 flex items-center gap-3 text-xs text-white/50">

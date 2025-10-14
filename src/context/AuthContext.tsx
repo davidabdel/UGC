@@ -47,10 +47,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [router, supabase])
 
   const signUp = async (email: string, password: string, name: string) => {
+    // In development, use admin signup endpoint to bypass email delivery
+    if (process.env.NODE_ENV !== 'production') {
+      try {
+        const res = await fetch('/api/dev-admin-signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, name })
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          return { error: { message: data?.error || 'Admin signup failed' } }
+        }
+        return { error: null }
+      } catch (e: any) {
+        return { error: { message: e?.message || 'Admin signup error' } }
+      }
+    }
+
+    // In production, use normal email confirmation flow
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : ''))
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
+        emailRedirectTo: siteUrl ? `${siteUrl}/auth/callback` : undefined,
         data: {
           name
         }

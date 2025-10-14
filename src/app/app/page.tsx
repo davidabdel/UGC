@@ -15,6 +15,12 @@ const mockProjects: Project[] = [];
 export default function DashboardPage() {
   const hasProjects = mockProjects.length > 0;
 
+  // Immediately redirect app home to Create New Ad
+  if (typeof window !== 'undefined') {
+    window.location.replace('/app/create');
+    return null;
+  }
+
   return (
     <div className="space-y-6">
       {/* Welcome / CTA */}

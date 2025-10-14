@@ -23,7 +23,7 @@ export default function LoginPage() {
       if (error) {
         setError(error.message);
       } else {
-        router.push('/app');
+        router.push('/app/create');
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred during sign in');
@@ -131,3 +131,4 @@ export default function LoginPage() {
     </div>
   );
 }
+
