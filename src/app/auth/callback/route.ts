@@ -5,27 +5,46 @@ import { cookies } from 'next/headers'
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
-
+  
+  // Create a new response object that we'll modify and return
+  const cookieStore = cookies()
+  
   if (code) {
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL || '',
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
       {
         cookies: {
-          get: async (name: string) => (await cookies()).get(name)?.value,
-          set: async (name: string, value: string, options?: CookieOptions) => {
-            (await cookies()).set({ name, value, ...(options || {}) })
+          get: (name: string) => {
+            return cookieStore.get(name)?.value
           },
-          remove: async (name: string, options?: CookieOptions) => {
-            (await cookies()).set({ name, value: '', ...(options || {}) })
+          set: (name: string, value: string, options?: CookieOptions) => {
+            cookieStore.set({ name, value, ...options })
+          },
+          remove: (name: string, options?: CookieOptions) => {
+            cookieStore.set({ name, value: '', ...options })
           }
         }
       }
     )
 
-    await supabase.auth.exchangeCodeForSession(code)
+    try {
+      // Exchange the code for a session
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+      
+      if (error) {
+        console.error('Error exchanging code for session:', error)
+        return NextResponse.redirect(new URL('/login?error=auth', requestUrl.origin))
+      }
+      
+      // If successful, redirect to the app
+      return NextResponse.redirect(new URL('/app/create', requestUrl.origin))
+    } catch (error) {
+      console.error('Exception during auth callback:', error)
+      return NextResponse.redirect(new URL('/login?error=server', requestUrl.origin))
+    }
   }
 
-  // URL to redirect to after sign in process completes
-  return NextResponse.redirect(new URL('/app/create', request.url))
+  // If no code is present, redirect to login
+  return NextResponse.redirect(new URL('/login?error=no_code', requestUrl.origin))
 }
