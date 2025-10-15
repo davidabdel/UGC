@@ -24,47 +24,60 @@ export default function UpscaleDialog({
   const [taskId, setTaskId] = useState<string | null>(null);
   const [retries, setRetries] = useState<number>(0);
   const [statusCheckCount, setStatusCheckCount] = useState<number>(0);
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
-  const handleUpscale = async () => {
+  // Direct API call to KIE
+  const handleDirectUpscale = async () => {
     setIsProcessing(true);
     setProgress(10);
     setError(null);
     setRetries(0);
     setStatusCheckCount(0);
+    setDebugInfo(null);
 
     try {
-      // Start the upscale process
-      const response = await fetch("/api/kie/upscale", {
+      // Get the KIE API key from an environment variable or config
+      // This is just a fallback - you should set this in your .env.local
+      const KIE_API_KEY = process.env.NEXT_PUBLIC_KIE_API_KEY || "06ebbce40758c0e4a1d0c6e4d9e6c6f7";
+      const KIE_API_BASE = process.env.NEXT_PUBLIC_KIE_API_BASE || "https://api.kie.ai";
+      
+      // Call the KIE upscale API directly
+      const response = await fetch(`${KIE_API_BASE}/api/v1/jobs/createTask`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${KIE_API_KEY}`
         },
         body: JSON.stringify({
-          imageUrl,
-          scale,
-          faceEnhance,
-        }),
+          model: "nano-banana-upscale",
+          input: {
+            image: imageUrl,
+            scale: scale,
+            face_enhance: !!faceEnhance
+          }
+        })
       });
 
       const data = await response.json();
       
-      if (!data.ok || !data.taskId) {
-        throw new Error(data.error || "Failed to start upscale process");
+      if (!response.ok || !data.data?.taskId) {
+        setDebugInfo(JSON.stringify(data, null, 2));
+        throw new Error(data.message || "Failed to start upscale process");
       }
 
-      setTaskId(data.taskId);
+      setTaskId(data.data.taskId);
       setProgress(30);
       
-      // Poll for status
-      await checkStatus(data.taskId);
+      // Poll for status directly
+      await checkDirectStatus(data.data.taskId);
     } catch (err: any) {
-      console.error("Upscale error:", err);
+      console.error("Direct upscale error:", err);
       setError(err.message || "An error occurred during upscaling");
       setIsProcessing(false);
     }
   };
 
-  const checkStatus = async (id: string) => {
+  const checkDirectStatus = async (id: string) => {
     if (statusCheckCount > 30) { // Limit to 30 status checks (about 1 minute)
       setError("Upscale process timed out. Please try again later.");
       setIsProcessing(false);
@@ -74,57 +87,59 @@ export default function UpscaleDialog({
     setStatusCheckCount(prev => prev + 1);
 
     try {
-      const response = await fetch("/api/kie/upscale-status", {
-        method: "POST",
+      // Get the KIE API key from an environment variable or config
+      const KIE_API_KEY = process.env.NEXT_PUBLIC_KIE_API_KEY || "06ebbce40758c0e4a1d0c6e4d9e6c6f7";
+      const KIE_API_BASE = process.env.NEXT_PUBLIC_KIE_API_BASE || "https://api.kie.ai";
+      
+      // Call the KIE API directly to check task status
+      const response = await fetch(`${KIE_API_BASE}/api/v1/jobs/getTaskResult?taskId=${id}`, {
+        method: "GET",
         headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          taskId: id,
-        }),
+          "Authorization": `Bearer ${KIE_API_KEY}`
+        }
       });
-
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => "Unknown error");
-        throw new Error(`Status check failed: ${response.status} - ${errorText}`);
-      }
 
       const data = await response.json();
       
-      if (!data.ok) {
-        // If the error is retryable and we haven't retried too many times
-        if (data.retryable && retries < 3) {
-          setRetries(prev => prev + 1);
-          setTimeout(() => checkStatus(id), 2000);
-          return;
-        }
-        throw new Error(data.error || "Failed to check upscale status");
+      if (!response.ok) {
+        setDebugInfo(JSON.stringify(data, null, 2));
+        throw new Error(`Status check failed: ${response.status}`);
       }
 
-      if (data.status === "success" && data.resultUrls?.length > 0) {
-        // Upscale completed successfully
-        setProgress(100);
-        setTimeout(() => {
-          setIsProcessing(false);
-          onUpscaleComplete(data.resultUrls[0]);
-          onOpenChange(false);
-        }, 1000);
-      } else if (data.status === "fail") {
+      // Parse the result to extract the upscaled image URL if available
+      if (data.data?.state === "success" && data.data?.resultJson) {
+        try {
+          const resultJson = JSON.parse(data.data.resultJson);
+          const resultUrls = resultJson.resultUrls || [];
+          
+          if (resultUrls.length > 0) {
+            // Upscale completed successfully
+            setProgress(100);
+            setTimeout(() => {
+              setIsProcessing(false);
+              onUpscaleComplete(resultUrls[0]);
+              onOpenChange(false);
+            }, 1000);
+            return;
+          }
+        } catch (e) {
+          console.error("Failed to parse resultJson:", e);
+        }
+      } else if (data.data?.state === "fail") {
         throw new Error("Upscale process failed");
-      } else {
-        // Still processing, update progress and check again
-        // Calculate progress based on status check count
-        const newProgress = Math.min(90, 30 + (statusCheckCount * 2));
-        setProgress(newProgress);
-        setTimeout(() => checkStatus(id), 2000);
       }
+      
+      // Still processing, update progress and check again
+      const newProgress = Math.min(90, 30 + (statusCheckCount * 2));
+      setProgress(newProgress);
+      setTimeout(() => checkDirectStatus(id), 2000);
     } catch (err: any) {
-      console.error("Status check error:", err);
+      console.error("Direct status check error:", err);
       
       // If we haven't retried too many times, try again
       if (retries < 3) {
         setRetries(prev => prev + 1);
-        setTimeout(() => checkStatus(id), 3000);
+        setTimeout(() => checkDirectStatus(id), 3000);
       } else {
         setError(err.message || "An error occurred while checking status");
         setIsProcessing(false);
@@ -207,7 +222,7 @@ export default function UpscaleDialog({
                 >
                   Cancel
                 </Button>
-                <Button onClick={handleUpscale} className="bg-white text-black hover:bg-white/90">
+                <Button onClick={handleDirectUpscale} className="bg-white text-black hover:bg-white/90">
                   Upscale
                 </Button>
               </div>
@@ -223,6 +238,14 @@ export default function UpscaleDialog({
                 <div className="mt-4 rounded-md bg-red-900/30 p-3 text-sm text-red-200">
                   <p className="font-medium">Error:</p>
                   <p>{error}</p>
+                  {debugInfo && (
+                    <details className="mt-2 text-xs">
+                      <summary>Debug Info</summary>
+                      <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded bg-black/50 p-2">
+                        {debugInfo}
+                      </pre>
+                    </details>
+                  )}
                   <div className="mt-2 flex justify-end">
                     <Button
                       onClick={handleCancel}
