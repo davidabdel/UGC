@@ -443,14 +443,14 @@ export default function SubscriptionPage() {
                   <div className="text-right">
                     {subscription.status === 'canceled' ? (
                       <div className="text-lg font-medium">
-                        $0.00<span className="text-sm text-white/60">/month</span>
+                        $0.00<span className="text-sm text-white/60">/{currentPlan?.name?.toLowerCase().includes('yearly') ? 'year' : 'month'}</span>
                         <div className="text-sm text-red-400">canceled</div>
                       </div>
                     ) : (
                       <>
                         <div className="text-lg font-medium">
                           {formatPrice(billingCycle === 'monthly' ? currentPlan?.price_monthly || 0 : currentPlan?.price_yearly || 0)}
-                          <span className="text-sm text-white/60">/{billingCycle === 'monthly' ? 'month' : 'year'}</span>
+                          <span className="text-sm text-white/60">/{currentPlan?.name?.toLowerCase().includes('yearly') ? 'year' : 'month'}</span>
                         </div>
                         <div className="text-sm text-white/60">
                           {subscription.status === 'active' ? 'Active' : subscription.status}
@@ -624,7 +624,7 @@ export default function SubscriptionPage() {
                     <h3 className="text-lg font-semibold mb-2">{plan.name}</h3>
                     <div className="mb-4">
                       <span className="text-2xl font-bold">{formatPrice(price)}</span>
-                      <span className="text-white/60">/{billingCycle === 'monthly' ? 'month' : 'year'}</span>
+                      <span className="text-white/60">/{plan.name.toLowerCase().includes('yearly') ? 'year' : 'month'}</span>
                     </div>
                     
                     <p className="text-white/70 mb-4">{plan.description}</p>

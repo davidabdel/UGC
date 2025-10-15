@@ -94,12 +94,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const googleSignIn = async () => {
-    await supabase.auth.signInWithOAuth({
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : ''))
+    const redirectTo = siteUrl ? `${siteUrl}/auth/callback` : undefined
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`
-      }
+        redirectTo,
+        queryParams: { prompt: 'select_account' },
+      },
+      // @ts-expect-error flowType exists in supabase-js v2
+      flowType: 'pkce',
     })
+    if (error) throw error
+    // On some browsers, explicitly navigate to returned URL
+    if (data?.url && typeof window !== 'undefined') {
+      window.location.assign(data.url)
+    }
   }
 
   const value = {
