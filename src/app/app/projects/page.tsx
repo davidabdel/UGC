@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import UpscaleDialog from "@/components/UpscaleDialog";
 
 type FilterType = "Images" | "Videos" | "All";
 
@@ -20,6 +21,7 @@ export default function ProjectsPage() {
   const [items, setItems] = useState<Project[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [active, setActive] = useState<Project | null>(null);
+  const [showUpscaleDialog, setShowUpscaleDialog] = useState(false);
 
   useEffect(() => {
     try {
@@ -42,7 +44,10 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setShowModal(false);
+      if (e.key === "Escape") {
+        setShowModal(false);
+        setShowUpscaleDialog(false);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -78,6 +83,35 @@ export default function ProjectsPage() {
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 2000);
     } catch {}
+  };
+
+  const handleUpscale = () => {
+    if (active?.type === "image" && active?.videoUrl) {
+      setShowUpscaleDialog(true);
+      setShowModal(false);
+    }
+  };
+
+  const handleUpscaleComplete = (newImageUrl: string) => {
+    // Update the active project with the new upscaled image URL
+    if (active) {
+      const updatedProject = { ...active, videoUrl: newImageUrl };
+      setActive(updatedProject);
+      
+      // Update the project in the items array
+      const updatedItems = items.map(item => 
+        item.id === active.id ? updatedProject : item
+      );
+      setItems(updatedItems);
+      
+      // Save to localStorage
+      try {
+        localStorage.setItem("ugc_projects", JSON.stringify(updatedItems));
+      } catch {}
+      
+      // Show the modal with the upscaled image
+      setShowModal(true);
+    }
   };
 
   const filtered = items.filter((p) => {
@@ -194,6 +228,11 @@ export default function ProjectsPage() {
               <div className="flex items-center justify-between border-b border-white/10 p-3">
                 <div className="text-sm text-white/70">{active?.title || "Preview"}</div>
                 <div className="flex gap-2">
+                  {active?.type === "image" && (
+                    <button className="btn-ghost" onClick={handleUpscale}>
+                      Upscale
+                    </button>
+                  )}
                   <button className={`btn-ghost ${!active?.videoUrl ? "pointer-events-none opacity-60" : ""}`} onClick={downloadActive} disabled={!active?.videoUrl}>
                     {active?.type === "image" ? "Download Image" : "Download Video"}
                   </button>
@@ -219,6 +258,16 @@ export default function ProjectsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Upscale Dialog */}
+      {showUpscaleDialog && active?.videoUrl && (
+        <UpscaleDialog
+          imageUrl={active.videoUrl}
+          onUpscaleComplete={handleUpscaleComplete}
+          open={showUpscaleDialog}
+          onOpenChange={setShowUpscaleDialog}
+        />
       )}
     </div>
   );
