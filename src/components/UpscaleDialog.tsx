@@ -22,11 +22,15 @@ export default function UpscaleDialog({
   const [progress, setProgress] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [taskId, setTaskId] = useState<string | null>(null);
+  const [retries, setRetries] = useState<number>(0);
+  const [statusCheckCount, setStatusCheckCount] = useState<number>(0);
 
   const handleUpscale = async () => {
     setIsProcessing(true);
     setProgress(10);
     setError(null);
+    setRetries(0);
+    setStatusCheckCount(0);
 
     try {
       // Start the upscale process
@@ -54,12 +58,21 @@ export default function UpscaleDialog({
       // Poll for status
       await checkStatus(data.taskId);
     } catch (err: any) {
+      console.error("Upscale error:", err);
       setError(err.message || "An error occurred during upscaling");
       setIsProcessing(false);
     }
   };
 
   const checkStatus = async (id: string) => {
+    if (statusCheckCount > 30) { // Limit to 30 status checks (about 1 minute)
+      setError("Upscale process timed out. Please try again later.");
+      setIsProcessing(false);
+      return;
+    }
+
+    setStatusCheckCount(prev => prev + 1);
+
     try {
       const response = await fetch("/api/kie/upscale-status", {
         method: "POST",
@@ -71,9 +84,20 @@ export default function UpscaleDialog({
         }),
       });
 
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => "Unknown error");
+        throw new Error(`Status check failed: ${response.status} - ${errorText}`);
+      }
+
       const data = await response.json();
       
       if (!data.ok) {
+        // If the error is retryable and we haven't retried too many times
+        if (data.retryable && retries < 3) {
+          setRetries(prev => prev + 1);
+          setTimeout(() => checkStatus(id), 2000);
+          return;
+        }
         throw new Error(data.error || "Failed to check upscale status");
       }
 
@@ -89,24 +113,50 @@ export default function UpscaleDialog({
         throw new Error("Upscale process failed");
       } else {
         // Still processing, update progress and check again
-        setProgress(Math.min(90, progress + 10));
+        // Calculate progress based on status check count
+        const newProgress = Math.min(90, 30 + (statusCheckCount * 2));
+        setProgress(newProgress);
         setTimeout(() => checkStatus(id), 2000);
       }
     } catch (err: any) {
-      setError(err.message || "An error occurred while checking status");
-      setIsProcessing(false);
+      console.error("Status check error:", err);
+      
+      // If we haven't retried too many times, try again
+      if (retries < 3) {
+        setRetries(prev => prev + 1);
+        setTimeout(() => checkStatus(id), 3000);
+      } else {
+        setError(err.message || "An error occurred while checking status");
+        setIsProcessing(false);
+      }
     }
   };
 
+  const handleCancel = () => {
+    if (isProcessing) {
+      setIsProcessing(false);
+    }
+    onOpenChange(false);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleCancel}>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
         <div className="w-full max-w-md rounded-lg border border-white/10 bg-[#0B0D12] p-6">
           <h2 className="mb-4 text-xl font-semibold">Upscale Image</h2>
           
           <div className="mb-6 aspect-video w-full overflow-hidden rounded-lg bg-black/50">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={imageUrl} alt="Original image" className="h-full w-full object-contain" />
+            <img 
+              src={imageUrl} 
+              alt="Original image" 
+              className="h-full w-full object-contain"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'%3E%3C/circle%3E%3Cpolyline points='21 15 16 10 5 21'%3E%3C/polyline%3E%3C/svg%3E";
+                setError("Unable to load image. The image URL may be inaccessible.");
+              }}
+            />
           </div>
           
           {!isProcessing ? (
@@ -142,11 +192,16 @@ export default function UpscaleDialog({
                 </label>
               </div>
               
-              {error && <div className="mb-4 rounded-md bg-red-900/30 p-3 text-sm text-red-200">{error}</div>}
+              {error && (
+                <div className="mb-4 rounded-md bg-red-900/30 p-3 text-sm text-red-200">
+                  <p className="font-medium">Error:</p>
+                  <p>{error}</p>
+                </div>
+              )}
               
               <div className="flex justify-end gap-2">
                 <Button
-                  onClick={() => onOpenChange(false)}
+                  onClick={handleCancel}
                   variant="outline"
                   className="border-white/10 bg-white/5 hover:bg-white/10"
                 >
@@ -159,10 +214,27 @@ export default function UpscaleDialog({
             </>
           ) : (
             <div className="space-y-4">
-              <Progress value={progress} className="h-2 w-full bg-white/10" indicatorClassName="bg-white" />
+              <Progress value={progress} className="h-2 w-full bg-white/10" />
               <p className="text-center text-sm text-white/70">
                 {progress < 100 ? "Processing your image..." : "Upscale complete!"}
               </p>
+              
+              {error && (
+                <div className="mt-4 rounded-md bg-red-900/30 p-3 text-sm text-red-200">
+                  <p className="font-medium">Error:</p>
+                  <p>{error}</p>
+                  <div className="mt-2 flex justify-end">
+                    <Button
+                      onClick={handleCancel}
+                      variant="outline"
+                      className="border-white/10 bg-white/5 hover:bg-white/10"
+                      size="sm"
+                    >
+                      Close
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
