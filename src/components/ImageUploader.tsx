@@ -27,9 +27,10 @@ export default function ImageUploader() {
       } else {
         setError('Upload failed: ' + (result.error ? String(result.error) : 'Unknown error'))
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error uploading image:', err)
-      setError(err.message || 'An unexpected error occurred')
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred'
+      setError(message)
     } finally {
       setIsUploading(false)
     }

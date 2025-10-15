@@ -21,7 +21,6 @@ export default function UpscaleDialog({
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
-  const [taskId, setTaskId] = useState<string | null>(null);
   const [retries, setRetries] = useState<number>(0);
   const [statusCheckCount, setStatusCheckCount] = useState<number>(0);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
@@ -65,14 +64,14 @@ export default function UpscaleDialog({
         throw new Error(data.message || "Failed to start upscale process");
       }
 
-      setTaskId(data.data.taskId);
       setProgress(30);
       
       // Poll for status directly
       await checkDirectStatus(data.data.taskId);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Direct upscale error:", err);
-      setError(err.message || "An error occurred during upscaling");
+      const message = err instanceof Error ? err.message : "An error occurred during upscaling";
+      setError(message);
       setIsProcessing(false);
     }
   };
@@ -102,8 +101,8 @@ export default function UpscaleDialog({
       const data = await response.json();
       
       if (!response.ok) {
-        setDebugInfo(JSON.stringify(data, null, 2));
-        throw new Error(`Status check failed: ${response.status}`);
+        const errorText = await response.text().catch(() => "Unknown error");
+        throw new Error(`Status check failed: ${response.status} - ${errorText}`);
       }
 
       // Parse the result to extract the upscaled image URL if available
@@ -133,7 +132,7 @@ export default function UpscaleDialog({
       const newProgress = Math.min(90, 30 + (statusCheckCount * 2));
       setProgress(newProgress);
       setTimeout(() => checkDirectStatus(id), 2000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Direct status check error:", err);
       
       // If we haven't retried too many times, try again
@@ -141,7 +140,8 @@ export default function UpscaleDialog({
         setRetries(prev => prev + 1);
         setTimeout(() => checkDirectStatus(id), 3000);
       } else {
-        setError(err.message || "An error occurred while checking status");
+        const message = err instanceof Error ? err.message : "An error occurred while checking status";
+        setError(message);
         setIsProcessing(false);
       }
     }

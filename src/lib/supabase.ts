@@ -12,7 +12,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
     console.warn('Supabase env vars are missing. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY')
   } else {
     // server-side
-    // eslint-disable-next-line no-console
     console.warn('Supabase env vars are missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your environment.')
   }
 }

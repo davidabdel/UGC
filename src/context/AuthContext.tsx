@@ -9,8 +9,8 @@ type AuthContextType = {
   user: User | null
   session: Session | null
   isLoading: boolean
-  signUp: (email: string, password: string, name: string) => Promise<{ error: any }>
-  signIn: (email: string, password: string) => Promise<{ error: any }>
+  signUp: (email: string, password: string, name: string) => Promise<{ error: { message?: string } | null }>
+  signIn: (email: string, password: string) => Promise<{ error: { message?: string } | null }>
   signOut: () => Promise<void>
   googleSignIn: () => Promise<void>
 }
@@ -26,7 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const getSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession()
+      const { data: { session } } = await supabase.auth.getSession()
       setSession(session)
       setUser(session?.user || null)
       setIsLoading(false)
@@ -60,8 +60,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return { error: { message: data?.error || 'Admin signup failed' } }
         }
         return { error: null }
-      } catch (e: any) {
-        return { error: { message: e?.message || 'Admin signup error' } }
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : 'Admin signup error'
+        return { error: { message } }
       }
     }
 
@@ -77,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
     })
-    return { error }
+    return { error: error ? { message: error.message } : null }
   }
 
   const signIn = async (email: string, password: string) => {
@@ -85,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
       password
     })
-    return { error }
+    return { error: error ? { message: error.message } : null }
   }
 
   const signOut = async () => {
