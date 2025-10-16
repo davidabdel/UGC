@@ -20,7 +20,7 @@ export default function SetupSubscription() {
       
       // Call a server-side function to set up the subscription
       // This approach bypasses RLS policies since it runs with SECURITY DEFINER
-      const { data, error } = await supabase.rpc('setup_user_subscription', {
+      const { error } = await supabase.rpc('setup_user_subscription', {
         user_id: user.id
       })
       
@@ -54,11 +54,12 @@ export default function SetupSubscription() {
         window.location.reload()
       }, 2000)
       
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error setting up subscription:', err)
+      const message = err instanceof Error ? err.message : 'Unknown error'
       setResult({ 
         success: false, 
-        message: `Error: ${err.message || 'Unknown error'}` 
+        message: `Error: ${message}` 
       })
     } finally {
       setIsLoading(false)

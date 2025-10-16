@@ -2,7 +2,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import HoverPlayVideo from "@/components/HoverPlayVideo";
-import type { ReactNode } from "react";
 import HowItWorks from "@/components/HowItWorks";
 
 // Mini metric card with inline SVG sparkline (no deps)

@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   const code = requestUrl.searchParams.get('code')
   
   // Create a new response object that we'll modify and return
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   
   if (code) {
     const supabase = createServerClient(
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
 
     try {
       // Exchange the code for a session
-      const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+      const { error } = await supabase.auth.exchangeCodeForSession(code)
       
       if (error) {
         console.error('Error exchanging code for session:', error)

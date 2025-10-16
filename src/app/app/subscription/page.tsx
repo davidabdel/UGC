@@ -118,7 +118,7 @@ export default function SubscriptionPage() {
             console.log('Plan ID from subscription:', subscriptionResult.subscription.plan_id)
             
             // Check if the plan exists in the plans array
-            const planExists = plans.some(p => p.id === subscriptionResult.subscription?.plan_id)
+            const planExists = (plansResult.plans || []).some(p => p.id === subscriptionResult.subscription?.plan_id)
             console.log('Plan exists in plans array:', planExists)
             
             // Check if the embedded plan exists
@@ -159,9 +159,10 @@ export default function SubscriptionPage() {
         if (transactionsResult.success) {
           setTransactions(transactionsResult.transactions || [])
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error loading subscription data:', err)
-        setError(err.message || 'An error occurred while loading subscription data')
+        const message = err instanceof Error ? err.message : 'An error occurred while loading subscription data'
+        setError(message)
       } finally {
         setIsLoading(false)
       }
@@ -189,9 +190,10 @@ export default function SubscriptionPage() {
       if (subscriptionResult.success) {
         setSubscription(subscriptionResult.subscription || null)
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error changing subscription plan:', err)
-      setError(err.message || 'An error occurred while changing your subscription plan')
+      const message = err instanceof Error ? err.message : 'An error occurred while changing your subscription plan'
+      setError(message)
     } finally {
       setIsChangingPlan(false)
     }
@@ -216,9 +218,10 @@ export default function SubscriptionPage() {
       if (subscriptionResult.success) {
         setSubscription(subscriptionResult.subscription || null)
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error canceling subscription:', err)
-      setError(err.message || 'An error occurred while canceling your subscription')
+      const message = err instanceof Error ? err.message : 'An error occurred while canceling your subscription'
+      setError(message)
     } finally {
       setIsCanceling(false)
     }
@@ -366,9 +369,10 @@ export default function SubscriptionPage() {
         if (transactionsResult.success) {
           setTransactions(transactionsResult.transactions || [])
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error refreshing subscription data:', err)
-        setError(err.message || 'An error occurred while refreshing subscription data')
+        const message = err instanceof Error ? err.message : 'An error occurred while refreshing subscription data'
+        setError(message)
       }
     } else {
       // Force reload the page if no user
@@ -509,7 +513,7 @@ export default function SubscriptionPage() {
                 )}
               </div>
             ) : (
-              <p className="text-white/70">You don't have an active subscription.</p>
+              <p className="text-white/70">You don&apos;t have an active subscription.</p>
             )}
           </div>
           
