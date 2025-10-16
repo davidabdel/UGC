@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
         console.log(`No credits found for user ${userId}, creating initial credits`);
         
         // Get the user's active subscription to determine credits amount
-        const { data: subscription, error: subError } = await supabase
+        const { data: subscription } = await supabase
           .from('user_subscriptions')
           .select(`
             *,

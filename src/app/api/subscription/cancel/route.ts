@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import Stripe from 'stripe';
 
 // Initialize Supabase admin client (bypasses RLS)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://jkgkuiuycqyzobbiwxpx.supabase.co';
@@ -88,7 +89,6 @@ export async function POST(req: NextRequest) {
         // Only attempt to cancel in Stripe if we have the Stripe API key
         const stripeApiKey = process.env.STRIPE_API_KEY;
         if (stripeApiKey) {
-          const Stripe = require('stripe');
           const stripe = new Stripe(stripeApiKey);
           
           console.log(`Canceling Stripe subscription: ${subscription.payment_provider_subscription_id}`);

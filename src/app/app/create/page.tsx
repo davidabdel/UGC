@@ -127,7 +127,7 @@ export default function CreateWizardPage() {
       default:
         return false;
     }
-  }, [step, adType, productFileName, productFile, personaMode, personaSummary, dialogueOk, generatedImageUrl, isGenerating]);
+  }, [step, adType, productFile, personaMode, personaSummary, dialogueOk, generatedImageUrl, isGenerating]);
 
   const onNext = () => {
     setStep((s) => {
