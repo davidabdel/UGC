@@ -316,7 +316,7 @@ export async function changeSubscriptionPlan(userId: string, planId: string) {
 /**
  * Cancel the user's subscription
  */
-export async function cancelSubscription(userId: string, cancelImmediately = false) {
+export async function cancelSubscription(userId: string, _cancelImmediately = false) {
   try {
     console.log(`Calling direct cancel subscription API for user ${userId}`);
     

@@ -100,7 +100,7 @@ export default function HoverPlayVideo({ src, className = "", rounded = "rounded
   return (
     <video
       ref={ref}
-      className={className}
+      className={`${className} ${rounded}`}
       aria-label={ariaLabel}
       muted
       playsInline

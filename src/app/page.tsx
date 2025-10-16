@@ -63,54 +63,6 @@ function MetricCard({
   );
 }
 
-// Illustrated How-it-works card (no external deps)
-function StepCard({
-  step,
-  title,
-  icon,
-  accent = "#8B5CF6",
-}: {
-  step: number;
-  title: string;
-  icon: ReactNode; // inline SVG element
-  accent?: string;
-}) {
-  return (
-    <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition-transform duration-200 hover:-translate-y-0.5">
-      {/* Accent glow */}
-      <div
-        className="pointer-events-none absolute -inset-16 rounded-[40px] opacity-60 blur-2xl"
-        style={{ background: `radial-gradient(40% 40% at 20% 10%, ${accent}22 0%, transparent 60%)` }}
-      />
-      <div className="relative flex items-start gap-3">
-        <div className="shrink-0 rounded-xl border border-white/10 bg-[#0F1117] p-2 text-white/90">{icon}</div>
-        <div className="min-w-0">
-          <div className="text-xs text-white/60">Step {step}</div>
-          <div className="mt-1 font-semibold">{title}</div>
-        </div>
-      </div>
-      {/* Decorative ribbon */}
-      <svg
-        className="absolute -right-8 -bottom-8 h-28 w-28 opacity-30 transition-opacity duration-200 group-hover:opacity-60"
-        viewBox="0 0 100 100"
-        fill="none"
-      >
-        <defs>
-          <linearGradient id={`lg-${step}`} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor={accent} stopOpacity="0.6" />
-            <stop offset="100%" stopColor={accent} stopOpacity="0.1" />
-          </linearGradient>
-        </defs>
-        <path
-          d="M5 80 C 25 60, 45 100, 65 70 C 80 50, 90 40, 95 45"
-          stroke={`url(#lg-${step})`}
-          strokeWidth="6"
-          strokeLinecap="round"
-        />
-      </svg>
-    </div>
-  );
-}
 export default function Home() {
   return (
     <div className="min-h-screen bg-[color:var(--surface)] text-[color:var(--text)]">

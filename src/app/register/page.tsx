@@ -13,7 +13,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  // Removed unused successMessage to satisfy lint rules
   const router = useRouter();
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,14 +54,15 @@ export default function RegisterPage() {
 
       if (signUpError) {
         // If we already navigated, silently ignore; otherwise show error.
-        if (!navigated) setError(signUpError.message);
+        if (!navigated) setError(signUpError.message || 'Registration failed');
         return;
       }
       // Successful and fast: navigate now (if not already)
       navigateQuickly();
       return;
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during registration');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'An error occurred during registration'
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -70,8 +71,9 @@ export default function RegisterPage() {
   const handleGoogleSignIn = async () => {
     try {
       await googleSignIn();
-    } catch (err: any) {
-      setError(err.message || 'An error occurred with Google sign in');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'An error occurred with Google sign in'
+      setError(message);
     }
   };
   return (
@@ -105,11 +107,7 @@ export default function RegisterPage() {
             </div>
           )}
           
-          {successMessage && (
-            <div className="mt-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg text-sm text-white">
-              {successMessage}
-            </div>
-          )}
+          {/* successMessage removed */}
           
           <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
             <fieldset disabled={isLoading} className="space-y-4">

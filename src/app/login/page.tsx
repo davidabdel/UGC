@@ -21,12 +21,13 @@ export default function LoginPage() {
     try {
       const { error } = await signIn(email, password);
       if (error) {
-        setError(error.message);
+        setError(error.message || 'Sign in failed');
       } else {
         router.push('/app/create');
       }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during sign in');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'An error occurred during sign in';
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -35,8 +36,9 @@ export default function LoginPage() {
   const handleGoogleSignIn = async () => {
     try {
       await googleSignIn();
-    } catch (err: any) {
-      setError(err.message || 'An error occurred with Google sign in');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'An error occurred with Google sign in';
+      setError(message);
     }
   };
   return (
