@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     console.log('Starting plan update process');
     
     // Check if the stripe_price_id column exists
-    const { data: columns, error: columnsError } = await supabase
+    const { error: columnsError } = await supabase
       .from('subscription_plans')
       .select('id, name')
       .limit(1);
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
     
     // We'll first check if we can select the column
     try {
-      const { data: testData, error: testError } = await supabase
+      const { error: testError } = await supabase
         .from('subscription_plans')
         .select('stripe_price_id')
         .limit(1);
@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
     
     // Update the Lite plan
     console.log('Updating Lite plan');
-    const { data: liteUpdate, error: liteError } = await supabase
+    const { error: liteError } = await supabase
       .from('subscription_plans')
       .update({ stripe_price_id: 'price_1SELqMKIeF7PCY4JjPiAhvmx' })
       .eq('name', 'Lite')
@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
     
     // Update the Business plan
     console.log('Updating Business plan');
-    const { data: businessUpdate, error: businessError } = await supabase
+    const { error: businessError } = await supabase
       .from('subscription_plans')
       .update({ stripe_price_id: 'price_1SELv9KIeF7PCY4J8o8mvjHB' })
       .eq('name', 'Business')
@@ -96,7 +96,7 @@ export async function GET(req: NextRequest) {
     
     // Update the Heavy plan
     console.log('Updating Heavy plan');
-    const { data: heavyUpdate, error: heavyError } = await supabase
+    const { error: heavyError } = await supabase
       .from('subscription_plans')
       .update({ stripe_price_id: 'price_1SELvjKIeF7PCY4Jbf4vtqC2' })
       .eq('name', 'Heavy')

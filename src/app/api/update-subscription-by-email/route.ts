@@ -29,12 +29,15 @@ async function getUserByEmail(email: string): Promise<string | null> {
     const { data: authData, error: authError } = await supabase
       .auth
       .admin
-      .listUsers({
-        filter: `email.eq.${email}`
-      });
+      .listUsers();
       
     if (!authError && authData && authData.users.length > 0) {
-      const userId = authData.users[0].id;
+      const match = authData.users.find(u => (u.email || '').toLowerCase() === email.toLowerCase());
+      const userId = match?.id;
+      if (!userId) {
+        console.error(`User not found in auth.users for email: ${email}`);
+        return null;
+      }
       console.log(`Found user in auth.users with ID: ${userId}`);
       return userId;
     }
@@ -119,7 +122,7 @@ async function upsertSubscription(
     endDate.setMonth(endDate.getMonth() + 1); // Add 1 month
     
     // Check if subscription already exists
-    const { data: existingSub, error: findError } = await supabase
+    const { data: existingSub } = await supabase
       .from('user_subscriptions')
       .select('*')
       .eq('user_id', userId)

@@ -43,10 +43,10 @@ export default function CreateWizardPage() {
   // Video generation state
   const [videoGenerating, setVideoGenerating] = useState(false);
   const [videoStatus, setVideoStatus] = useState<string>("");
-  const [videoTaskId, setVideoTaskId] = useState<string | null>(null);
+  const [, setVideoTaskId] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoPrompt, setVideoPrompt] = useState<string>("Pan camera gently across the scene and showcase the product clearly.");
-  const [videoStage, setVideoStage] = useState<string | null>(null);
+  const [, setVideoStage] = useState<string | null>(null);
   const [videoPct, setVideoPct] = useState<number | null>(null);
   // Synthetic progress controller
   const videoStartRef = useRef<number | null>(null);
@@ -127,7 +127,7 @@ export default function CreateWizardPage() {
       default:
         return false;
     }
-  }, [step, adType, productFileName, personaMode, personaSummary, dialogueOk, generatedImageUrl, isGenerating]);
+  }, [step, adType, productFileName, productFile, personaMode, personaSummary, dialogueOk, generatedImageUrl, isGenerating]);
 
   const onNext = () => {
     setStep((s) => {

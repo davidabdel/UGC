@@ -195,7 +195,6 @@ export default function ProjectsPage() {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={p.videoUrl} alt={p.title} className="h-full w-full object-cover" />
                     ) : (
-                      // eslint-disable-next-line jsx-a11y/media-has-caption
                       <video src={p.videoUrl} className="h-full w-full object-cover" />
                     )
                   ) : null}

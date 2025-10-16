@@ -88,11 +88,12 @@ export async function POST(req: NextRequest) {
       previousBalance,
       difference
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Unexpected error updating user credits:', error);
+    const message = error instanceof Error ? error.message : 'Failed to update user credits';
     return NextResponse.json({ 
       success: false, 
-      error: error.message || 'Failed to update user credits' 
+      error: message 
     }, { status: 500 });
   }
 }
