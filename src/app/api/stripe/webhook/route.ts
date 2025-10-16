@@ -332,7 +332,7 @@ async function upsertSubscription(
   currentPeriodEnd: string,
   cancelAtPeriodEnd: boolean = false,
   customerEmail?: string, // Add email parameter
-  isYearly: boolean = false // Add isYearly parameter
+  _isYearly: boolean = false // Add isYearly parameter
 ) {
   try {
     debugLog(`Upserting subscription for user ${userId}`, {

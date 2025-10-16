@@ -44,7 +44,7 @@ const PRICE_TO_CREDITS_MAP: Record<string, { name: string, credits: number }> = 
 };
 
 // Debug function to log all steps
-function debugLog(message: string, data?: any) {
+function debugLog(message: string, data?: unknown) {
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] ${message}`);
   
@@ -52,7 +52,7 @@ function debugLog(message: string, data?: any) {
   if (data) {
     try {
       console.log(JSON.stringify(data, null, 2));
-    } catch (e) {
+    } catch {
       console.log('Could not stringify data:', data);
     }
   }
@@ -336,7 +336,7 @@ async function upsertSubscription(
   currentPeriodEnd: string,
   cancelAtPeriodEnd: boolean = false,
   customerEmail?: string, // Add email parameter
-  isYearly: boolean = false // Add isYearly parameter
+  _isYearly: boolean = false // Add isYearly parameter
 ) {
   try {
     debugLog(`Upserting subscription for user ${userId}`, {
@@ -572,24 +572,23 @@ export async function POST(req: NextRequest) {
         
         // Get price ID from invoice line items
         let priceId: string | null = null;
-        
-        const invAny = invoice as any;
-        if (invAny.lines?.data?.length > 0) {
-          const lineItem = invAny.lines.data[0] as any;
-          if (lineItem.price?.id) {
-            priceId = lineItem.price.id as string;
-          }
+        if (invoice.lines?.data?.length) {
+          const lineItem = invoice.lines.data[0] as unknown as { price?: { id?: string } | null };
+          priceId = lineItem?.price?.id ?? null;
         }
         
         // If we couldn't get the price ID from the invoice, get it from the subscription
         if (!priceId) {
           try {
             const stripe = getStripe();
-            const subId = (invoice as any).subscription as string;
+            const subField = (invoice as unknown as { subscription?: string | { id?: string } | null }).subscription;
+            const subId = typeof subField === 'string' ? subField : subField?.id;
+            if (!subId) throw new Error('No subscription ID on invoice');
             console.log(`INVOICE: Fetching subscription from Stripe: ${subId}`);
-            const subscription = await stripe.subscriptions.retrieve(subId);
-            if (subscription.items?.data?.length > 0) {
-              priceId = subscription.items.data[0].price.id;
+            const subResp = await stripe.subscriptions.retrieve(subId);
+            const subStruct = subResp as unknown as { items?: { data?: Array<{ price?: { id?: string } | null }> } };
+            if (subStruct.items?.data?.length) {
+              priceId = subStruct.items.data[0].price?.id ?? null;
             }
           } catch (error) {
             console.error('Error retrieving subscription:', error);
@@ -607,7 +606,7 @@ export async function POST(req: NextRequest) {
         // If this is a renewal (not the first payment), add credits
         if (invoice.billing_reason === 'subscription_cycle') {
           // Get credits amount from price mapping
-          const { credits, isYearly } = await getPlanDetails(priceId);
+          const { credits } = await getPlanDetails(priceId);
           
           if (credits > 0) {
             await addCreditsToUser(
