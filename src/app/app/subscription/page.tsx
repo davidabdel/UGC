@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { 
   getSubscriptionPlans, 
@@ -55,6 +55,8 @@ export default function SubscriptionPage() {
     return '#'
   }
   
+  const handleRefreshRef = useRef<() => void>(() => {})
+
   // Check for status=success in URL and refresh data
   useEffect(() => {
     // Check if we have a success status in the URL
@@ -73,7 +75,7 @@ export default function SubscriptionPage() {
         
         // Refresh data after a short delay to allow webhook processing
         setTimeout(() => {
-          handleRefresh()
+          handleRefreshRef.current()
         }, 2000)
       }
     }
@@ -170,6 +172,10 @@ export default function SubscriptionPage() {
     
     loadSubscriptionData()
   }, [user])
+
+  useEffect(() => {
+    handleRefreshRef.current = handleRefresh
+  }, [handleRefresh])
   
   const handleChangePlan = async (planId: string) => {
     if (!user) return
@@ -287,7 +293,7 @@ export default function SubscriptionPage() {
   
   const currentPlan = getCurrentPlan()
   
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     
@@ -380,7 +386,7 @@ export default function SubscriptionPage() {
     }
     
     setIsLoading(false)
-  }
+  }, [user])
   
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">

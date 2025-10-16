@@ -873,7 +873,7 @@ export default function CreateWizardPage() {
         <aside className="hidden md:block">
           <div className="glass-card sticky top-[96px] !p-4">
             <ol className="space-y-2 text-sm">
-              {steps.map((st, i) => {
+              {steps.map((st) => {
                 const active = st.id === step;
                 const complete = st.id < step;
                 return (
@@ -1233,7 +1233,7 @@ export default function CreateWizardPage() {
                       <div>
                         <label className="text-white/80">Seed</label>
                         <input readOnly value="123456" className="mt-1 w-full rounded-lg bg-[#0F1117] border border-white/10 px-3 py-2" />
-                        <div className="mt-1 text-xs text-white/60">Toggle "Lock seed" to edit</div>
+                        <div className="mt-1 text-xs text-white/60">Toggle &quot;Lock seed&quot; to edit</div>
                       </div>
                       <div>
                         <label className="text-white/80">Style strength</label>
@@ -1384,7 +1384,6 @@ export default function CreateWizardPage() {
                     <div className="font-semibold">Result</div>
                     <div className="mt-2 aspect-[4/5] w-full overflow-hidden rounded-lg bg-black/30">
                       {videoUrl ? (
-                        // eslint-disable-next-line jsx-a11y/media-has-caption
                         <video src={videoUrl} controls className="h-full w-full object-cover" />
                       ) : (
                         <div className="grid h-full place-items-center text-xs text-white/60">No video yet</div>
@@ -1424,7 +1423,6 @@ export default function CreateWizardPage() {
                 </div>
                 <div className="aspect-video w-full bg-black">
                   {videoUrl ? (
-                    // eslint-disable-next-line jsx-a11y/media-has-caption
                     <video src={videoUrl} controls autoPlay className="h-full w-full object-contain" />
                   ) : null}
                 </div>

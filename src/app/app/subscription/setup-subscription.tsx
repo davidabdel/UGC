@@ -70,7 +70,7 @@ export default function SetupSubscription() {
     <div className="glass-card mb-8">
       <h2 className="text-xl font-semibold mb-4">Subscription Setup</h2>
       <p className="text-white/70 mb-4">
-        It looks like your subscription hasn't been set up yet. Click the button below to set up your free subscription with 100 initial credits.
+        It looks like your subscription hasn&apos;t been set up yet. Click the button below to set up your free subscription with 100 initial credits.
       </p>
       
       <button
