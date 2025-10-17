@@ -67,9 +67,9 @@ export async function POST(req: NextRequest) {
     
     // Deduct credits using the spend_user_credits function
     const { data: spendResult, error: spendError } = await supabase.rpc('spend_user_credits', {
-      user_id: userId,
-      spend_amount: creditCost,
-      spend_description: `Image upscaling ${scale}x`
+      p_user_id: userId,
+      p_spend_amount: creditCost,
+      p_spend_description: `Image upscaling ${scale}x`
     });
     
     if (spendError || !spendResult?.success) {
@@ -101,9 +101,9 @@ export async function POST(req: NextRequest) {
     if (!res.ok) {
       // If the API call fails, refund the credits
       const { data: refundResult, error: refundError } = await supabase.rpc('spend_user_credits', {
-        user_id: userId,
-        spend_amount: -creditCost, // Negative amount to refund
-        spend_description: `Refund for failed image upscaling ${scale}x`
+        p_user_id: userId,
+        p_spend_amount: -creditCost, // Negative amount to refund
+        p_spend_description: `Refund for failed image upscaling ${scale}x`
       });
       
       if (refundError) {
@@ -137,9 +137,9 @@ export async function POST(req: NextRequest) {
         const refundAmount = CREDIT_COSTS[scaleValue as keyof typeof CREDIT_COSTS];
         
         const { data: refundResult, error: refundError } = await supabase.rpc('spend_user_credits', {
-          user_id: userIdValue,
-          spend_amount: -refundAmount, // Negative amount to refund
-          spend_description: `Refund for failed image upscaling ${scaleValue}x (error)`
+          p_user_id: userIdValue,
+          p_spend_amount: -refundAmount, // Negative amount to refund
+          p_spend_description: `Refund for failed image upscaling ${scaleValue}x (error)`
         });
         
         if (refundError) {

@@ -68,9 +68,9 @@ export async function POST(req: NextRequest) {
     
     // Deduct credits using the spend_user_credits function
     const { data: spendResult, error: spendError } = await supabase.rpc('spend_user_credits', {
-      user_id: userId,
-      spend_amount: creditCost,
-      spend_description: `Video upscaling to ${resolution}`
+      p_user_id: userId,
+      p_spend_amount: creditCost,
+      p_spend_description: `Video upscaling to ${resolution}`
     });
     
     if (spendError || !spendResult?.success) {
@@ -105,9 +105,9 @@ export async function POST(req: NextRequest) {
       if (!response.ok) {
         // If the API call fails, refund the credits
         const { data: refundResult, error: refundError } = await supabase.rpc('spend_user_credits', {
-          user_id: userId,
-          spend_amount: -creditCost, // Negative amount to refund
-          spend_description: `Refund for failed video upscaling to ${resolution}`
+          p_user_id: userId,
+          p_spend_amount: -creditCost, // Negative amount to refund
+          p_spend_description: `Refund for failed video upscaling to ${resolution}`
         });
         
         if (refundError) {
@@ -127,9 +127,9 @@ export async function POST(req: NextRequest) {
       if (!requestId) {
         // If no request ID, refund the credits
         const { data: refundResult, error: refundError } = await supabase.rpc('spend_user_credits', {
-          user_id: userId,
-          spend_amount: -creditCost, // Negative amount to refund
-          spend_description: `Refund for incomplete video upscaling to ${resolution}`
+          p_user_id: userId,
+          p_spend_amount: -creditCost, // Negative amount to refund
+          p_spend_description: `Refund for incomplete video upscaling to ${resolution}`
         });
         
         if (refundError) {
@@ -156,9 +156,9 @@ export async function POST(req: NextRequest) {
       // If there's an exception, try to refund the credits
       try {
         const { data: refundResult, error: refundError } = await supabase.rpc('spend_user_credits', {
-          user_id: userId,
-          spend_amount: -creditCost, // Negative amount to refund
-          spend_description: `Refund for failed video upscaling to ${resolution} (error)`
+          p_user_id: userId,
+          p_spend_amount: -creditCost, // Negative amount to refund
+          p_spend_description: `Refund for failed video upscaling to ${resolution} (error)`
         });
         
         if (refundError) {
