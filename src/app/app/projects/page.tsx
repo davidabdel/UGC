@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { createSupabaseBrowserClient } from "../../../lib/supabase";
 
 type FilterType = "Images" | "Videos" | "All";
 
@@ -278,24 +279,43 @@ export default function ProjectsPage() {
       setVideoUpscaleLoading(true);
       setVideoUpscaleStatus("Starting video upscale…");
       
+      // Get the current user ID from Supabase auth
+      const supabase = createSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user?.id) {
+        setVideoUpscaleStatus("Error: Not authenticated. Please log in.");
+        setVideoUpscaleLoading(false);
+        return;
+      }
+      
       const res = await fetch("/api/wavespeed/video-upscale", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           video: active.videoUrl, 
           resolution: videoResolution,
-          copyAudio: true
+          copyAudio: true,
+          userId: user.id
         }),
       });
       
       const data = await res.json().catch(() => ({}));
       
       if (!res.ok || !data?.ok) {
-        setVideoUpscaleStatus(`Failed: ${data?.error ? JSON.stringify(data.error) : res.status}`);
+        // Handle insufficient credits error specifically
+        if (res.status === 402) {
+          setVideoUpscaleStatus(`Insufficient credits. Required: ${data.required}, Available: ${data.available}`);
+        } else {
+          setVideoUpscaleStatus(`Failed: ${data?.error ? JSON.stringify(data.error) : res.status}`);
+        }
         return;
       }
       
-      setVideoUpscaleStatus("Video upscale task created.");
+      // Show credits spent in the status
+      const creditsSpent = data?.data?.creditsSpent || 0;
+      const remainingCredits = data?.data?.remainingCredits || 0;
+      setVideoUpscaleStatus(`Video upscale task created. ${creditsSpent} credits spent. ${remainingCredits} credits remaining.`);
 
       // Create a placeholder project item
       try {
@@ -653,14 +673,20 @@ export default function ProjectsPage() {
                 </div>
                 <div>
                   <div className="mb-2 text-sm font-medium">Resolution</div>
-                  <div className="flex gap-2">
-                    {["720p", "1080p", "2k", "4k"].map((res) => (
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { res: "720p", cost: 100 },
+                      { res: "1080p", cost: 125 },
+                      { res: "2k", cost: 250 },
+                      { res: "4k", cost: 500 }
+                    ].map((option) => (
                       <button
-                        key={res}
-                        className={`rounded-xl border px-4 py-2 ${videoResolution === res ? "bg-white text-black" : "bg-white/10 text-white/90 border-white/15"}`}
-                        onClick={() => setVideoResolution(res as "720p" | "1080p" | "2k" | "4k")}
+                        key={option.res}
+                        className={`rounded-xl border px-4 py-2 ${videoResolution === option.res ? "bg-white text-black" : "bg-white/10 text-white/90 border-white/15"}`}
+                        onClick={() => setVideoResolution(option.res as "720p" | "1080p" | "2k" | "4k")}
                       >
-                        {res}
+                        <div>{option.res}</div>
+                        <div className="text-xs mt-1 opacity-80">{option.cost} Credits</div>
                       </button>
                     ))}
                   </div>
