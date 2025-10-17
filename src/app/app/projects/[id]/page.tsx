@@ -1,9 +1,40 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 
 export default function ProjectDetailsPage({ params }: { params: { id: string } }) {
   const id = params.id;
+  const [imageUrl, setImageUrl] = useState("");
+  const [scale, setScale] = useState<number>(2);
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+
+  const runUpscale = async () => {
+    if (!imageUrl) {
+      setStatus("Please enter an image URL");
+      return;
+    }
+    setLoading(true);
+    setStatus("Starting upscale…");
+    try {
+      const res = await fetch("/api/kie/upscale", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: imageUrl, scale, face_enhance: false }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.ok) {
+        setStatus(`Failed: ${data?.error ? JSON.stringify(data.error) : res.status}`);
+        return;
+      }
+      setStatus("Upscale task created. Check Renders or status endpoint.");
+    } catch (e) {
+      setStatus("Unexpected error starting upscale.");
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -51,6 +82,34 @@ export default function ProjectDetailsPage({ params }: { params: { id: string } 
               <div className="mt-2 flex gap-2 text-sm">
                 <button className="btn-ghost">Download</button>
                 <button className="btn-ghost">Replace</button>
+              </div>
+              <div className="mt-3 grid gap-2 text-sm">
+                <input
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="Image URL to upscale"
+                  className="w-full rounded-md bg-white/10 px-3 py-2 outline-none"
+                />
+                <div className="flex items-center gap-2">
+                  <label className="text-white/70">Scale</label>
+                  <select
+                    value={scale}
+                    onChange={(e) => setScale(Number(e.target.value))}
+                    className="rounded-md bg-white/10 px-2 py-1"
+                  >
+                    <option value={2}>2x</option>
+                    <option value={3}>3x</option>
+                    <option value={4}>4x</option>
+                  </select>
+                  <button
+                    onClick={runUpscale}
+                    disabled={loading}
+                    className="btn-ghost"
+                  >
+                    {loading ? "Upscaling…" : "Upscale"}
+                  </button>
+                </div>
+                {status ? <div className="text-xs text-white/70">{status}</div> : null}
               </div>
             </div>
           </div>
