@@ -27,6 +27,12 @@ export default function ProjectsPage() {
   const [upscaleLoading, setUpscaleLoading] = useState(false);
   const [upscaleStatus, setUpscaleStatus] = useState<string | null>(null);
   const [showUpscale, setShowUpscale] = useState(false);
+  
+  // Video upscale state
+  const [videoResolution, setVideoResolution] = useState<"720p" | "1080p" | "2k" | "4k">("1080p");
+  const [showVideoUpscale, setShowVideoUpscale] = useState(false);
+  const [videoUpscaleLoading, setVideoUpscaleLoading] = useState(false);
+  const [videoUpscaleStatus, setVideoUpscaleStatus] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -266,6 +272,146 @@ export default function ProjectsPage() {
     }
   };
 
+  const runVideoUpscale = async () => {
+    if (!active?.videoUrl || active.type !== "video") return;
+    try {
+      setVideoUpscaleLoading(true);
+      setVideoUpscaleStatus("Starting video upscale…");
+      
+      const res = await fetch("/api/wavespeed/video-upscale", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          video: active.videoUrl, 
+          resolution: videoResolution,
+          copyAudio: true
+        }),
+      });
+      
+      const data = await res.json().catch(() => ({}));
+      
+      if (!res.ok || !data?.ok) {
+        setVideoUpscaleStatus(`Failed: ${data?.error ? JSON.stringify(data.error) : res.status}`);
+        return;
+      }
+      
+      setVideoUpscaleStatus("Video upscale task created.");
+
+      // Create a placeholder project item
+      try {
+        const key = "ugc_projects";
+        const raw = localStorage.getItem(key);
+        const arr: any[] = raw ? JSON.parse(raw) : [];
+        const now = new Date();
+        const newItem: Project = {
+          id: `video-upscaled-${now.getTime()}`,
+          title: `Video Upscaled to ${videoResolution}`,
+          status: "Draft",
+          type: "video",
+          updatedAt: "just now",
+          videoUrl: active.videoUrl,
+          upscaled: true,
+          taskId: data?.data?.taskId || undefined,
+        };
+        const next = [newItem, ...arr];
+        localStorage.setItem(key, JSON.stringify(next));
+        setItems(next as Project[]);
+
+        // Begin polling task status to update the placeholder with the final upscaled video URL
+        if (newItem.taskId) {
+          console.log('Starting video upscale polling for taskId:', newItem.taskId, 'placeholderId:', newItem.id);
+          pollVideoUpscaleStatus(newItem.taskId, newItem.id);
+        } else {
+          console.warn('No taskId returned from createTask; cannot poll. Raw response:', data);
+        }
+      } catch (error) {
+        console.error('Error creating placeholder item:', error);
+      }
+
+      // Close the upscale picker
+      setShowVideoUpscale(false);
+    } catch (error) {
+      console.error('Error in runVideoUpscale:', error);
+      setVideoUpscaleStatus("Unexpected error starting video upscale.");
+    } finally {
+      setVideoUpscaleLoading(false);
+    }
+  };
+
+  // Poll Wavespeed for task completion and update the placeholder item
+  function pollVideoUpscaleStatus(taskId: string, placeholderId: string) {
+    const started = Date.now();
+    const maxMs = 10 * 60 * 1000; // 10 minutes
+    const intervalMs = 5000; // check every 5s
+
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const stop = () => {
+      if (intervalId) clearInterval(intervalId);
+      intervalId = null;
+    };
+
+    const tick = async () => {
+      if (Date.now() - started > maxMs) { 
+        stop(); 
+        setVideoUpscaleStatus("Upscale timed out after 10 minutes.");
+        return; 
+      }
+      
+      try {
+        const res = await fetch(`/api/wavespeed/video-upscale-status?taskId=${encodeURIComponent(taskId)}`);
+        const j = await res.json().catch(() => ({}));
+        
+        console.log('Video upscale status payload:', j);
+        
+        if (res.ok && j?.ok) {
+          const status = j?.data?.status;
+          const resultUrl = j?.data?.resultUrl;
+          
+          // Update status message
+          if (status === "processing" || status === "starting") {
+            setVideoUpscaleStatus(`Upscaling in progress... (${status})`);
+          } else if (status === "failed") {
+            setVideoUpscaleStatus(`Upscale failed: ${j?.data?.error || "Unknown error"}`);
+            stop();
+            return;
+          }
+          
+          // Check if complete
+          if (status === "completed" && resultUrl) {
+            setVideoUpscaleStatus("Upscale completed!");
+            
+            // Update the placeholder item with the final URL
+            const key = 'ugc_projects';
+            const raw = localStorage.getItem(key);
+            const arr: Project[] = raw ? JSON.parse(raw) : [];
+            const idx = arr.findIndex(it => it.id === placeholderId);
+            
+            if (idx >= 0) {
+              arr[idx] = {
+                ...arr[idx],
+                status: 'Ready',
+                updatedAt: 'just now',
+                videoUrl: resultUrl,
+              };
+              localStorage.setItem(key, JSON.stringify(arr));
+              setItems(arr);
+            }
+            
+            stop();
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Error polling video upscale status:', error);
+      }
+    };
+
+    // Start polling
+    tick();
+    intervalId = setInterval(tick, intervalMs);
+  }
+
   return (
     <div className="space-y-6">
       {/* Toolbar */}
@@ -395,6 +541,11 @@ export default function ProjectsPage() {
                       Upscale
                     </button>
                   ) : null}
+                  {active?.type === "video" && active?.videoUrl && !active?.upscaled ? (
+                    <button className="btn-ghost" onClick={() => { setVideoUpscaleStatus(null); setShowVideoUpscale(true); }}>
+                      Upscale
+                    </button>
+                  ) : null}
                   {active?.videoUrl ? (
                     <a className="btn-ghost" href={active.videoUrl} target="_blank" rel="noopener noreferrer">Open in new tab</a>
                   ) : null}
@@ -477,6 +628,50 @@ export default function ProjectsPage() {
                   <button className="btn-ghost" onClick={() => setShowUpscale(false)}>Cancel</button>
                   <button className="btn-primary" disabled={upscaleLoading} onClick={async () => { await runUpscale(); }}>
                     {upscaleLoading ? "Upscaling…" : "Start Upscale"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Video Upscale modal */}
+      {showModal && showVideoUpscale && active?.type === "video" && active?.videoUrl && (
+        <div className="fixed inset-0 z-[60]">
+          <div className="absolute inset-0 bg-black/70" onClick={() => setShowVideoUpscale(false)} />
+          <div className="absolute inset-0 grid place-items-center p-4">
+            <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-[#0B0D12]">
+              <div className="flex items-center justify-between border-b border-white/10 p-3">
+                <div className="text-sm font-semibold">Upscale Video</div>
+                <button className="btn-ghost" onClick={() => setShowVideoUpscale(false)}>Close</button>
+              </div>
+              <div className="grid gap-4 p-4">
+                <div className="rounded-xl border border-white/10 bg-black">
+                  {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                  <video src={active.videoUrl} controls className="mx-auto max-h-80 w-auto object-contain" />
+                </div>
+                <div>
+                  <div className="mb-2 text-sm font-medium">Resolution</div>
+                  <div className="flex gap-2">
+                    {["720p", "1080p", "2k", "4k"].map((res) => (
+                      <button
+                        key={res}
+                        className={`rounded-xl border px-4 py-2 ${videoResolution === res ? "bg-white text-black" : "bg-white/10 text-white/90 border-white/15"}`}
+                        onClick={() => setVideoResolution(res as "720p" | "1080p" | "2k" | "4k")}
+                      >
+                        {res}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between border-t border-white/10 p-3">
+                <div className="text-xs text-white/70">{videoUpscaleStatus || ""}</div>
+                <div className="flex gap-2">
+                  <button className="btn-ghost" onClick={() => setShowVideoUpscale(false)}>Cancel</button>
+                  <button className="btn-primary" disabled={videoUpscaleLoading} onClick={async () => { await runVideoUpscale(); }}>
+                    {videoUpscaleLoading ? "Upscaling…" : "Start Upscale"}
                   </button>
                 </div>
               </div>
