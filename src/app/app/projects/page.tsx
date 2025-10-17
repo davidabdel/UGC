@@ -222,17 +222,44 @@ export default function ProjectsPage() {
     try {
       setUpscaleLoading(true);
       setUpscaleStatus("Starting upscale…");
+      
+      // Get the current user ID from Supabase auth
+      const supabase = createSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user?.id) {
+        setUpscaleStatus("Error: Not authenticated. Please log in.");
+        setUpscaleLoading(false);
+        return;
+      }
+      
       const res = await fetch("/api/kie/upscale", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: active.videoUrl, scale: upscaleScale, face_enhance: false }),
+        body: JSON.stringify({ 
+          image: active.videoUrl, 
+          scale: upscaleScale, 
+          face_enhance: false,
+          userId: user.id
+        }),
       });
+      
       const data = await res.json().catch(() => ({}));
+      
       if (!res.ok || !data?.ok) {
-        setUpscaleStatus(`Failed: ${data?.error ? JSON.stringify(data.error) : res.status}`);
+        // Handle insufficient credits error specifically
+        if (res.status === 402) {
+          setUpscaleStatus(`Insufficient credits. Required: ${data.required}, Available: ${data.available}`);
+        } else {
+          setUpscaleStatus(`Failed: ${data?.error ? JSON.stringify(data.error) : res.status}`);
+        }
         return;
       }
-      setUpscaleStatus("Upscale task created.");
+      
+      // Show credits spent in the status
+      const creditsSpent = data?.data?.creditsSpent || 0;
+      const remainingCredits = data?.data?.remainingCredits || 0;
+      setUpscaleStatus(`Upscale task created. ${creditsSpent} credits spent. ${remainingCredits} credits remaining.`);
 
       // Create a placeholder project item so it appears under images with a green highlight
       try {
@@ -262,11 +289,14 @@ export default function ProjectsPage() {
         } else {
           console.warn('No taskId returned from createTask; cannot poll. Raw response:', data);
         }
-      } catch {}
+      } catch (error) {
+        console.error('Error creating placeholder item:', error);
+      }
 
       // Close the upscale picker
       setShowUpscale(false);
-    } catch {
+    } catch (error) {
+      console.error('Error in runUpscale:', error);
       setUpscaleStatus("Unexpected error starting upscale.");
     } finally {
       setUpscaleLoading(false);
@@ -629,14 +659,19 @@ export default function ProjectsPage() {
                 </div>
                 <div>
                   <div className="mb-2 text-sm font-medium">Scale Factor</div>
-                  <div className="flex gap-2">
-                    {[2,3,4].map((s) => (
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { scale: 2, cost: 10 },
+                      { scale: 3, cost: 20 },
+                      { scale: 4, cost: 30 }
+                    ].map((option) => (
                       <button
-                        key={s}
-                        className={`rounded-xl border px-4 py-2 ${upscaleScale === s ? "bg-white text-black" : "bg-white/10 text-white/90 border-white/15"}`}
-                        onClick={() => setUpscaleScale(s)}
+                        key={option.scale}
+                        className={`rounded-xl border px-4 py-2 ${upscaleScale === option.scale ? "bg-white text-black" : "bg-white/10 text-white/90 border-white/15"}`}
+                        onClick={() => setUpscaleScale(option.scale)}
                       >
-                        {s}x
+                        <div>{option.scale}x</div>
+                        <div className="text-xs mt-1 opacity-80">{option.cost} Credits</div>
                       </button>
                     ))}
                   </div>
