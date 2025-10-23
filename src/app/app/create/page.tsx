@@ -61,6 +61,10 @@ export default function CreateWizardPage() {
   const [productError, setProductError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  // Project picker state (select existing image from My Projects)
+  const [showProjectPicker, setShowProjectPicker] = useState(false);
+  const [projectPickTarget, setProjectPickTarget] = useState<"product" | "persona" | null>(null);
+  const [projectImages, setProjectImages] = useState<{ id: string; title: string; url: string }[]>([]);
 
   // Persona upload state
   const [personaFile, setPersonaFile] = useState<File | null>(null);
@@ -102,6 +106,57 @@ export default function CreateWizardPage() {
     };
     load();
   }, [user]);
+
+  // Load images saved under "My Projects" (localStorage key: ugc_projects)
+  const openProjectPicker = (target: "product" | "persona") => {
+    try {
+      const key = "ugc_projects";
+      const existing = JSON.parse(localStorage.getItem(key) || "[]");
+      const imgs = Array.isArray(existing)
+        ? existing
+            .filter((x) => x && x.type === "image" && typeof x.videoUrl === "string" && x.videoUrl)
+            .map((x) => ({ id: String(x.id || Math.random()), title: String(x.title || "Image"), url: String(x.videoUrl) }))
+        : [];
+      setProjectImages(imgs);
+    } catch {
+      setProjectImages([]);
+    }
+    setProjectPickTarget(target);
+    setShowProjectPicker(true);
+  };
+
+  // Select an existing image by downloading it and creating a File so validation and upload paths work
+  const selectProjectImage = async (url: string) => {
+    try {
+      setProductError(null);
+      // Always use server proxy to avoid CORS noise in dev
+      const proxied = await fetch(`/api/download-image?url=${encodeURIComponent(url)}`);
+      if (!proxied.ok) throw new Error("proxy fetch failed");
+      const blob = await proxied.blob();
+      const ext = blob.type.includes("png")
+        ? "png"
+        : blob.type.includes("jpeg") || blob.type.includes("jpg")
+        ? "jpg"
+        : blob.type.includes("webp")
+        ? "webp"
+        : "png";
+      const file = new File([blob], `project-image.${ext}` as string, { type: blob.type || "image/png" });
+      if (projectPickTarget === "product") {
+        setProductFile(file);
+        const sizeMB = file.size / (1024 * 1024);
+        setProductFileName(`${file.name} (${sizeMB.toFixed(1)}MB)`);
+        setProductPreview(url);
+      } else if (projectPickTarget === "persona") {
+        setPersonaFile(file);
+        setPersonaError(null);
+        // personaPreview is handled by effect when personaFile changes
+        if (personaMode !== "upload") setPersonaMode("upload");
+      }
+      setShowProjectPicker(false);
+    } catch (e) {
+      setProductError("Could not load image from My Projects. Please try downloading and uploading it.");
+    }
+  };
 
   const canContinue = useMemo(() => {
     switch (step) {
@@ -1020,6 +1075,13 @@ export default function CreateWizardPage() {
                       <button className="btn-ghost" onClick={() => fileInputRef.current?.click()}>Replace</button>
                     </>
                   )}
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={(e) => { e.stopPropagation(); openProjectPicker('product'); }}
+                  >
+                    Select from My Projects
+                  </button>
                 </div>
                 <div className="mt-4 text-xs text-white/60">Server will normalize EXIF and format.</div>
               </div>
@@ -1101,6 +1163,16 @@ export default function CreateWizardPage() {
                   {personaError && (
                     <div className="mt-3 text-xs text-red-400">{personaError}</div>
                   )}
+                  <div className="mt-4 flex justify-center gap-3">
+                    <button type="button" className="btn-primary" onClick={(e) => { e.stopPropagation(); personaInputRef.current?.click(); }}>Choose file</button>
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      onClick={(e) => { e.stopPropagation(); openProjectPicker('persona'); }}
+                    >
+                      Select from My Projects
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -1427,6 +1499,44 @@ export default function CreateWizardPage() {
                     // eslint-disable-next-line jsx-a11y/media-has-caption
                     <video src={videoUrl} controls autoPlay className="h-full w-full object-contain" />
                   ) : null}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Project image picker modal */}
+        {showProjectPicker && (
+          <div className="fixed inset-0 z-50">
+            <div className="absolute inset-0 bg-black/70" onClick={() => setShowProjectPicker(false)} />
+            <div className="absolute inset-0 grid place-items-center p-4">
+              <div className="w-full max-w-5xl overflow-hidden rounded-2xl border border-white/10 bg-[#0B0D12]">
+                <div className="flex items-center justify-between border-b border-white/10 p-3">
+                  <div className="text-sm text-white/70">Select from My Projects</div>
+                  <div className="flex gap-2">
+                    <button className="btn-ghost" onClick={() => setShowProjectPicker(false)}>Close</button>
+                  </div>
+                </div>
+                <div className="p-4">
+                  {projectImages.length ? (
+                    <div className="grid gap-3 sm:grid-cols-3 md:grid-cols-4">
+                      {projectImages.map((img) => (
+                        <button
+                          key={img.id}
+                          className="group overflow-hidden rounded-xl border border-white/10 bg-white/5 text-left"
+                          onClick={() => selectProjectImage(img.url)}
+                        >
+                          <div className="aspect-[4/5] w-full overflow-hidden bg-black/30">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={img.url} alt={img.title} className="h-full w-full object-cover" />
+                          </div>
+                          <div className="p-2 text-xs text-white/70 group-hover:text-white/90">{img.title}</div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center text-sm text-white/70">No images found in My Projects.</div>
+                  )}
                 </div>
               </div>
             </div>
